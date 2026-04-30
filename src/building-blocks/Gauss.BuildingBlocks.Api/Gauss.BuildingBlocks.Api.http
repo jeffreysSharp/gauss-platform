@@ -1,0 +1,6 @@
+@Gauss.BuildingBlocks.Api_HostAddress = http://localhost:5208
+
+GET {{Gauss.BuildingBlocks.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
