@@ -1,0 +1,33 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Building Blocks/">
+    <Project Path="src/building-blocks/Gauss.BuildingBlocks.Api/Gauss.BuildingBlocks.Api.csproj" Id="bde0be15-0d2c-4137-8f67-85d01281ad83" />
+    <Project Path="src/building-blocks/Gauss.BuildingBlocks.Application/Gauss.BuildingBlocks.Application.csproj" Id="51de8709-f21f-4775-b9ac-9d2cc2c62243" />
+    <Project Path="src/building-blocks/Gauss.BuildingBlocks.Domain/Gauss.BuildingBlocks.Domain.csproj" Id="3b9dab5d-cca3-4503-b522-c4c4fa7055cd" />
+  </Folder>
+  <Folder Name="/src/Database/">
+    <Project Path="src/database/Gauss.Database.Migrations/Gauss.Database.Migrations.csproj" Id="e1364e43-e062-4507-bb29-719f4959ed35" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Audit/">
+    <Project Path="src/services/audit/Gauss.Audit.Application/Gauss.Audit.Application.csproj" Id="970cbcf6-2238-482f-9f57-caceacdf956a" />
+    <Project Path="src/services/audit/Gauss.Audit.Infrastructure/Gauss.Audit.Infrastructure.csproj" Id="046f4006-de4b-4617-97dc-a46eb9b895c1" />
+  </Folder>
+  <Folder Name="/src/Services/Identity/">
+    <Project Path="src/services/identity/Gauss.Identity.Api/Gauss.Identity.Api.csproj" Id="dfdefc8a-26df-43fc-ab1f-98366f6dabb9" />
+    <Project Path="src/services/identity/Gauss.Identity.Application/Gauss.Identity.Application.csproj" Id="63cf1fe6-55fe-4afa-b789-308c1ce494a9" />
+    <Project Path="src/services/identity/Gauss.Identity.Domain/Gauss.Identity.Domain.csproj" Id="0286d50c-2bd2-404c-808a-ba28c63f685e" />
+    <Project Path="src/services/identity/Gauss.Identity.Infrastructure/Gauss.Identity.Infrastructure.csproj" Id="08788ba9-b1bf-44d1-b0be-33afe7be1c7e" />
+  </Folder>
+  <Folder Name="/src/Services/Notification/">
+    <Project Path="src/services/notification/Gauss.Notification.Application/Gauss.Notification.Application.csproj" Id="1f93c530-75cc-4796-96d5-4a0d9db2cf78" />
+    <Project Path="src/services/notification/Gauss.Notification.Infrastructure/Gauss.Notification.Infrastructure.csproj" Id="f8d79510-62a5-4ab3-9f16-2ce1d5b8046a" />
+  </Folder>
+  <Folder Name="/src/Services/Platform/">
+    <Project Path="src/services/platform/Gauss.Platform.Application/Gauss.Platform.Application.csproj" Id="cc31f9a8-e1b2-4fdf-96b2-8eec60cbc3e7" />
+    <Project Path="src/services/platform/Gauss.Platform.Domain/Gauss.Platform.Domain.csproj" Id="80e8ce6a-2be9-4b91-9071-5c92920f7739" />
+    <Project Path="src/services/platform/Gauss.Platform.Infrastructure/Gauss.Platform.Infrastructure.csproj" Id="d324120c-fc26-4162-ae4c-ce42161687f2" />
+  </Folder>
+  <Folder Name="/src/Web/" />
+  <Folder Name="/tests/" />
+</Solution>
