@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\building-blocks\Gauss.BuildingBlocks.Application\Gauss.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\building-blocks\Gauss.BuildingBlocks.Api\Gauss.BuildingBlocks.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
