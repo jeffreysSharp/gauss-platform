@@ -6,6 +6,6 @@ public sealed class OpenApiInstaller : IInstaller
         IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddOpenApi();
+        services.AddOpenApi("v1");
     }
 }

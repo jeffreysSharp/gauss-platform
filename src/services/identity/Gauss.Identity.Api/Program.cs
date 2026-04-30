@@ -1,6 +1,7 @@
 using Gauss.Identity.Api.HealthChecks;
 using Gauss.Identity.Api.Installers;
 using Gauss.Identity.Api.Observability;
+using Gauss.Identity.Api.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,12 +11,9 @@ builder.Services.InstallServices(
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
 app.UseGaussCorrelationId();
+
+app.MapGaussOpenApi();
 
 app.MapGaussHealthChecks();
 
