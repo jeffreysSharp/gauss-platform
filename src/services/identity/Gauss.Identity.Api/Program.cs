@@ -1,3 +1,4 @@
+using Gauss.Identity.Api.HealthChecks;
 using Gauss.Identity.Api.Installers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,10 +14,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
+app.MapGaussHealthChecks();
 
 await app.RunAsync();
