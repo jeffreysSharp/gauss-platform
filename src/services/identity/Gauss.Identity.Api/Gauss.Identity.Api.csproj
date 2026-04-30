@@ -10,4 +10,11 @@
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Gauss.Identity.Application\Gauss.Identity.Application.csproj" />
+      <ProjectReference Include="..\Gauss.Identity.Infrastructure\Gauss.Identity.Infrastructure.csproj" />
+      <ProjectReference Include="..\..\..\building-blocks\Gauss.BuildingBlocks.Api\Gauss.BuildingBlocks.Api.csproj" />
+      <ProjectReference Include="..\..\..\building-blocks\Gauss.BuildingBlocks.Application\Gauss.BuildingBlocks.Application.csproj" />
+    </ItemGroup>
+
 </Project>

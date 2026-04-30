@@ -1,7 +1,9 @@
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
+using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Infrastructure.Authentication;
 using Gauss.Identity.Infrastructure.Persistence;
+using Gauss.Identity.Infrastructure.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, SqlUserRepository>();
 
         services.AddSingleton<IPasswordHasher, AspNetCorePasswordHasher>();
+
+        services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
         return services;
     }

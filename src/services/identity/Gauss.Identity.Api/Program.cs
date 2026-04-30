@@ -1,8 +1,10 @@
+using Gauss.Identity.Api.Installers;
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-
-builder.Services.AddOpenApi();
+builder.Services.InstallServices(
+    builder.Configuration,
+    typeof(Program).Assembly);
 
 var app = builder.Build();
 
@@ -17,4 +19,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
