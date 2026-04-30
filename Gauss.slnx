@@ -30,4 +30,8 @@
   </Folder>
   <Folder Name="/src/Web/" />
   <Folder Name="/tests/" />
+  <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/Gauss.BuildingBlocks.UnitTests/Gauss.BuildingBlocks.UnitTests.csproj" Id="e02e3d87-a1d0-4c79-b11e-b46083abca04" />
+    <Project Path="tests/UnitTests/Gauss.Identity.UnitTests/Gauss.Identity.UnitTests.csproj" Id="db037cbb-1e24-4f9d-9e8a-b23c31ac33d6" />
+  </Folder>
 </Solution>
