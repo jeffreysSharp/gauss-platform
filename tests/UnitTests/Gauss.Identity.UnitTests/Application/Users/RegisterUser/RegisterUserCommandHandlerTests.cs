@@ -145,6 +145,15 @@ public sealed class RegisterUserCommandHandlerTests
 
             return PasswordHash.Create($"hashed-{password}");
         }
+
+        public PasswordVerificationStatus Verify(
+            PasswordHash passwordHash,
+            string providedPassword)
+        {
+            return passwordHash.Value == $"hashed-{providedPassword}"
+                ? PasswordVerificationStatus.Success
+                : PasswordVerificationStatus.Failed;
+        }
     }
 
     private sealed class FakeDateTimeProvider : IDateTimeProvider
