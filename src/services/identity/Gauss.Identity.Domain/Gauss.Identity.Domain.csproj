@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Users\Events\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\building-blocks\Gauss.BuildingBlocks.Domain\Gauss.BuildingBlocks.Domain.csproj" />
   </ItemGroup>
 
