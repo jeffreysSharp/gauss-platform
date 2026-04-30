@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Gauss.BuildingBlocks.Application\Gauss.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\Gauss.Identity.Domain\Gauss.Identity.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
