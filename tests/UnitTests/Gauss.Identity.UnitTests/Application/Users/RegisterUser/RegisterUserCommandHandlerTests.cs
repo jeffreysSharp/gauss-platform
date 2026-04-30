@@ -47,53 +47,7 @@ public sealed class RegisterUserCommandHandlerTests
 
         passwordHasher.LastPassword.Should().Be("StrongPassword@123");
     }
-
-    [Theory(DisplayName = "Should return invalid name error when name is invalid")]
-    [Trait("Layer", "Application")]
-    [Trait("Category", "UseCases")]
-    [InlineData("")]
-    [InlineData(" ")]
-    public async Task Should_Return_InvalidName_Error_When_Name_Is_Invalid(string name)
-    {
-        // Arrange
-        var handler = CreateHandler();
-
-        var command = new RegisterUserCommand(
-            name,
-            "jeferson@gauss.com",
-            "StrongPassword@123");
-
-        // Act
-        var result = await handler.HandleAsync(command);
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(RegisterUserErrors.InvalidName);
-    }
-
-    [Theory(DisplayName = "Should return invalid password error when password is invalid")]
-    [Trait("Layer", "Application")]
-    [Trait("Category", "UseCases")]
-    [InlineData("")]
-    [InlineData(" ")]
-    public async Task Should_Return_InvalidPassword_Error_When_Password_Is_Invalid(string password)
-    {
-        // Arrange
-        var handler = CreateHandler();
-
-        var command = new RegisterUserCommand(
-            "Jeferson Almeida",
-            "jeferson@gauss.com",
-            password);
-
-        // Act
-        var result = await handler.HandleAsync(command);
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(RegisterUserErrors.InvalidPassword);
-    }
-
+    
     [Theory(DisplayName = "Should return invalid email error when email is invalid")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]

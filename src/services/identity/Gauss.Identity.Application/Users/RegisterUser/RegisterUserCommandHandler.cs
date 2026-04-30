@@ -15,20 +15,10 @@ public sealed class RegisterUserCommandHandler(
     : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
 {
     public async Task<Result<RegisterUserResponse>> HandleAsync(
-        RegisterUserCommand command,
-        CancellationToken cancellationToken = default)
+    RegisterUserCommand command,
+    CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-
-        if (string.IsNullOrWhiteSpace(command.Name))
-        {
-            return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidName);
-        }
-
-        if (string.IsNullOrWhiteSpace(command.Password))
-        {
-            return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidPassword);
-        }
 
         Email email;
 
