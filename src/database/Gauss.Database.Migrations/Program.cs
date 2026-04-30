@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Gauss.Database.Migrations;
 
-internal static class Program
+public static class Program
 {
     public static int Main(string[] args)
     {
