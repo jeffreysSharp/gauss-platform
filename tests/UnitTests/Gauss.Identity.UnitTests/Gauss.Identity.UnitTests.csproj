@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\services\identity\Gauss.Identity.Application\Gauss.Identity.Application.csproj" />
     <ProjectReference Include="..\..\..\src\services\identity\Gauss.Identity.Domain\Gauss.Identity.Domain.csproj" />
   </ItemGroup>
 
