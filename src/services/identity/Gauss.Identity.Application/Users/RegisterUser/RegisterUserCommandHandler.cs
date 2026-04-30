@@ -15,8 +15,8 @@ public sealed class RegisterUserCommandHandler(
     : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
 {
     public async Task<Result<RegisterUserResponse>> HandleAsync(
-    RegisterUserCommand command,
-    CancellationToken cancellationToken = default)
+        RegisterUserCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -31,7 +31,10 @@ public sealed class RegisterUserCommandHandler(
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidEmail);
         }
 
+        var tenantId = TenantId.New();
+
         var emailAlreadyExists = await userRepository.ExistsByEmailAsync(
+            tenantId,
             email,
             cancellationToken);
 
@@ -40,7 +43,6 @@ public sealed class RegisterUserCommandHandler(
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.EmailAlreadyExists);
         }
 
-        var tenantId = TenantId.New();
         var passwordHash = passwordHasher.Hash(command.Password);
 
         var user = User.Register(
