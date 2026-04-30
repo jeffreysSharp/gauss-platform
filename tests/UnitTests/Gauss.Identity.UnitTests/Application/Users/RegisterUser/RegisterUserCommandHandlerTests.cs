@@ -44,7 +44,8 @@ public sealed class RegisterUserCommandHandlerTests
         userRepository.AddedUser!.Email.Value.Should().Be("jeferson@gauss.com");
         userRepository.AddedUser.PasswordHash.Value.Should().Be("hashed-StrongPassword@123");
         userRepository.AddedUser.RegisteredAtUtc.Should().Be(dateTimeProvider.UtcNow);
-
+        userRepository.LastTenantIdChecked.Should().NotBeNull();
+        userRepository.LastEmailChecked.Should().Be(Email.Create("jeferson@gauss.com"));
         passwordHasher.LastPassword.Should().Be("StrongPassword@123");
     }
     
@@ -116,12 +117,20 @@ public sealed class RegisterUserCommandHandlerTests
     {
         public bool EmailAlreadyExists { get; init; }
 
+        public TenantId? LastTenantIdChecked { get; private set; }
+
+        public Email? LastEmailChecked { get; private set; }
+
         public User? AddedUser { get; private set; }
 
         public Task<bool> ExistsByEmailAsync(
+            TenantId tenantId,
             Email email,
             CancellationToken cancellationToken = default)
         {
+            LastTenantIdChecked = tenantId;
+            LastEmailChecked = email;
+
             return Task.FromResult(EmailAlreadyExists);
         }
 
