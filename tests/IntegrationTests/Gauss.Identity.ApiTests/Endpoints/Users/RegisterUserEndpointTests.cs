@@ -131,4 +131,109 @@ public sealed class RegisterUserEndpointTests(
 
         count.Should().Be(1);
     }
+
+    [Fact(DisplayName = "Should return bad request when name is invalid")]
+    [Trait("Layer", "Api")]
+    [Trait("Category", "Endpoints")]
+    public async Task Should_Return_Bad_Request_When_Name_Is_Invalid()
+    {
+        // Arrange
+        await using var factory = new IdentityApiFactory(databaseFixture);
+        using var client = factory.CreateClient();
+
+        var request = new
+        {
+            Name = "",
+            Email = $"jeferson-{Guid.NewGuid():N}@gauss.com",
+            Password = "StrongPassword@123"
+        };
+
+        // Act
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/identity/register",
+            request);
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var jsonDocument = JsonDocument.Parse(content);
+        var root = jsonDocument.RootElement;
+
+        root.GetProperty("status").GetInt32().Should().Be(400);
+        root.GetProperty("title").GetString().Should().Be("Validation Error");
+        root.GetProperty("code").GetString().Should().Be("Identity.User.NameRequired");
+        root.GetProperty("detail").GetString().Should().Contain("Name");
+    }
+
+    [Fact(DisplayName = "Should return bad request when email is invalid")]
+    [Trait("Layer", "Api")]
+    [Trait("Category", "Endpoints")]
+    public async Task Should_Return_Bad_Request_When_Email_Is_Invalid()
+    {
+        // Arrange
+        await using var factory = new IdentityApiFactory(databaseFixture);
+        using var client = factory.CreateClient();
+
+        var request = new
+        {
+            Name = "Jeferson Almeida",
+            Email = "invalid-email",  // Invalid email format
+            Password = "StrongPassword@123"
+        };
+
+        // Act
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/identity/register",
+            request);
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var jsonDocument = JsonDocument.Parse(content);
+        var root = jsonDocument.RootElement;
+
+        root.GetProperty("status").GetInt32().Should().Be(400);
+        root.GetProperty("title").GetString().Should().Be("Validation Error");
+        root.GetProperty("code").GetString().Should().Be("Identity.User.EmailInvalid");
+        root.GetProperty("detail").GetString().Should().Contain("Email");
+    }
+
+    [Fact(DisplayName = "Should return bad request when password is weak")]
+    [Trait("Layer", "Api")]
+    [Trait("Category", "Endpoints")]
+    public async Task Should_Return_Bad_Request_When_Password_Is_Weak()
+    {
+        // Arrange
+        await using var factory = new IdentityApiFactory(databaseFixture);
+        using var client = factory.CreateClient();
+
+        var request = new
+        {
+            Name = "Jeferson Almeida",
+            Email = $"jeferson-{Guid.NewGuid():N}@gauss.com",
+            Password = "weakpassword"  // Password without complexity (no special char, number, etc.)
+        };
+
+        // Act
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/identity/register",
+            request);
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var jsonDocument = JsonDocument.Parse(content);
+        var root = jsonDocument.RootElement;
+
+        root.GetProperty("status").GetInt32().Should().Be(400);
+        root.GetProperty("title").GetString().Should().Be("Validation Error");
+        root.GetProperty("code").GetString().Should().Be("Identity.User.PasswordRequiresUppercase");
+        root.GetProperty("detail").GetString().Should().Contain("Password");
+    }
 }
