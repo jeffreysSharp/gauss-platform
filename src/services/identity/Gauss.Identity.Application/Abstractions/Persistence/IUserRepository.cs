@@ -6,7 +6,6 @@ namespace Gauss.Identity.Application.Abstractions.Persistence;
 public interface IUserRepository
 {
     Task<bool> ExistsByEmailAsync(
-        TenantId tenantId,
         Email email,
         CancellationToken cancellationToken = default);
 

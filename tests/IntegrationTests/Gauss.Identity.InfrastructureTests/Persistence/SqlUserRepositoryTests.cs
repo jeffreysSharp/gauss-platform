@@ -71,18 +71,17 @@ public sealed class SqlUserRepositoryTests(
         await repository.AddAsync(user);
 
         // Act
-        var exists = await repository.ExistsByEmailAsync(
-            user.TenantId,
+        var exists = await repository.ExistsByEmailAsync(            
             user.Email);
 
         // Assert
         exists.Should().BeTrue();
     }
 
-    [Fact(DisplayName = "Should return false when email exists in another tenant")]
+    [Fact(DisplayName = "Should return true when email exists globally")]
     [Trait("Layer", "Infrastructure")]
     [Trait("Category", "Persistence")]
-    public async Task Should_Return_False_When_Email_Exists_In_Another_Tenant()
+    public async Task Should_Return_True_When_Email_Exists_Globally()
     {
         // Arrange
         var repository = CreateRepository();
@@ -91,15 +90,11 @@ public sealed class SqlUserRepositoryTests(
 
         await repository.AddAsync(user);
 
-        var anotherTenantId = TenantId.New();
-
         // Act
-        var exists = await repository.ExistsByEmailAsync(
-            anotherTenantId,
-            user.Email);
+        var exists = await repository.ExistsByEmailAsync(user.Email);
 
         // Assert
-        exists.Should().BeFalse();
+        exists.Should().BeTrue();
     }
 
     [Fact(DisplayName = "Should not persist plain text password")]

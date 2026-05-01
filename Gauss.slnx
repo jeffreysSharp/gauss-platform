@@ -31,6 +31,7 @@
   <Folder Name="/src/Web/" />
   <Folder Name="/tests/" />
   <Folder Name="/tests/IntegrationTests/">
+    <Project Path="tests/IntegrationTests/Gauss.Identity.ApiTests/Gauss.Identity.ApiTests.csproj" />
     <Project Path="tests/IntegrationTests/Gauss.Identity.InfrastructureTests/Gauss.Identity.InfrastructureTests.csproj" Id="9f6421d0-97f9-402b-a4c1-a142c19f279c" />
   </Folder>
   <Folder Name="/tests/UnitTests/">
