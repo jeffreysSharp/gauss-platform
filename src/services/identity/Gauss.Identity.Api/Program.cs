@@ -1,3 +1,4 @@
+using Gauss.Identity.Api.Endpoints;
 using Gauss.Identity.Api.HealthChecks;
 using Gauss.Identity.Api.Installers;
 using Gauss.Identity.Api.Observability;
@@ -16,5 +17,7 @@ app.UseGaussCorrelationId();
 app.MapGaussOpenApi();
 
 app.MapGaussHealthChecks();
+
+app.MapIdentityEndpoints();
 
 await app.RunAsync();
