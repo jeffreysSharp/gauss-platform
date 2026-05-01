@@ -26,6 +26,10 @@ public static class DependencyInjection
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
+        services.Configure<AccessTokenOptions>(configuration.GetSection(AccessTokenOptions.SectionName));
+
+        services.AddSingleton<IAccessTokenProvider, JwtAccessTokenProvider>();
+
         return services;
     }
 }
