@@ -21,3 +21,5 @@ app.MapGaussHealthChecks();
 app.MapIdentityEndpoints();
 
 await app.RunAsync();
+
+public partial class Program;

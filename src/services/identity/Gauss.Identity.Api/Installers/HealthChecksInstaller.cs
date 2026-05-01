@@ -1,3 +1,5 @@
+using Gauss.Identity.Infrastructure.Persistence;
+
 namespace Gauss.Identity.Api.Installers;
 
 public sealed class HealthChecksInstaller : IInstaller
@@ -6,13 +8,17 @@ public sealed class HealthChecksInstaller : IInstaller
         IServiceCollection services,
         IConfiguration configuration)
     {
-        services
-            .AddHealthChecks()
-            .AddSqlServer(
-                connectionString: configuration.GetRequiredSection("Identity:Persistence")
-                    .GetValue<string>("ConnectionString")
-                    ?? throw new InvalidOperationException("Identity persistence connection string was not configured."),
+        var connectionString = configuration.GetValue<string>(
+            $"{IdentityPersistenceOptions.SectionName}:ConnectionString");
+
+        var healthChecksBuilder = services.AddHealthChecks();
+
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            healthChecksBuilder.AddSqlServer(
+                connectionString: connectionString,
                 name: "sqlserver",
                 tags: ["ready"]);
+        }
     }
 }

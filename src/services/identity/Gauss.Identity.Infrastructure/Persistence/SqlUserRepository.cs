@@ -10,24 +10,22 @@ public sealed class SqlUserRepository(
     : IUserRepository
 {
     public async Task<bool> ExistsByEmailAsync(
-        TenantId tenantId,
         Email email,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT CAST(
-                CASE
+             SELECT CAST(
+                 CASE
                     WHEN EXISTS (
                         SELECT 1
                         FROM [identity].[Users]
-                        WHERE [TenantId] = @TenantId
-                          AND [NormalizedEmail] = @NormalizedEmail
+                        WHERE [NormalizedEmail] = @NormalizedEmail
                           AND [IsDeleted] = 0
-                    )
-                    THEN 1
-                    ELSE 0
+                     )
+                     THEN 1
+                     ELSE 0
                 END AS bit);
-            """;
+             """;
 
         await using var connection = connectionFactory.CreateConnection();
 
@@ -35,7 +33,6 @@ public sealed class SqlUserRepository(
             sql,
             new
             {
-                TenantId = tenantId.Value,
                 NormalizedEmail = email.Value
             },
             cancellationToken: cancellationToken);
