@@ -38,10 +38,10 @@ public sealed class M202604300002CreateIdentityUsers : Migration
             .FromTable(UsersTable).InSchema(IdentitySchema).ForeignColumn("TenantId")
             .ToTable(TenantsTable).InSchema(PlatformSchema).PrimaryColumn("Id");
 
-        Create.UniqueConstraint("UQ_Identity_Users_TenantId_NormalizedEmail")
+        Create.UniqueConstraint("UQ_Identity_Users_NormalizedEmail")
             .OnTable(UsersTable)
             .WithSchema(IdentitySchema)
-            .Columns("TenantId", "NormalizedEmail");
+            .Column("NormalizedEmail");
 
         Create.Index("IX_Identity_Users_TenantId")
             .OnTable(UsersTable)

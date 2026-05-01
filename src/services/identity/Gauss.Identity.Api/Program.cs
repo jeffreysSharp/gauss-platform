@@ -1,23 +1,25 @@
+using Gauss.Identity.Api.Endpoints;
+using Gauss.Identity.Api.HealthChecks;
+using Gauss.Identity.Api.Installers;
+using Gauss.Identity.Api.Observability;
+using Gauss.Identity.Api.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.InstallServices(
+    builder.Configuration,
+    typeof(Program).Assembly);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.UseGaussCorrelationId();
 
-app.UseHttpsRedirection();
+app.MapGaussOpenApi();
 
-app.UseAuthorization();
+app.MapGaussHealthChecks();
 
-app.MapControllers();
+app.MapIdentityEndpoints();
 
-app.Run();
+await app.RunAsync();
+
+public partial class Program;
