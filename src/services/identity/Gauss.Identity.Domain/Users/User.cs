@@ -1,5 +1,6 @@
 using Gauss.BuildingBlocks.Domain.Entities;
 using Gauss.Identity.Domain.Users.Events;
+using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Domain.Users;
@@ -27,6 +28,20 @@ public sealed class User : AggregateRoot<UserId>
             TenantId,
             Email.Value,
             RegisteredAtUtc));
+    }
+
+    private User(UserSnapshot snapshot)
+    : base(snapshot.Id)
+    {
+        TenantId = snapshot.TenantId;
+        Name = snapshot.Name;
+        Email = snapshot.Email;
+        PasswordHash = snapshot.PasswordHash;
+        Status = snapshot.Status;
+        RegisteredAtUtc = snapshot.RegisteredAtUtc;
+        EmailConfirmedAtUtc = snapshot.EmailConfirmedAtUtc;
+        LastLoginAtUtc = snapshot.LastLoginAtUtc;
+        LockedUntilUtc = snapshot.LockedUntilUtc;
     }
 
     public TenantId TenantId { get; private init; }
@@ -69,6 +84,16 @@ public sealed class User : AggregateRoot<UserId>
             email,
             passwordHash,
             registeredAtUtc);
+    }
+
+    public static User Rehydrate(UserSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshot.Name);
+        ArgumentNullException.ThrowIfNull(snapshot.Email);
+        ArgumentNullException.ThrowIfNull(snapshot.PasswordHash);
+
+        return new User(snapshot);
     }
 
     public void ConfirmEmail(DateTimeOffset confirmedAtUtc)

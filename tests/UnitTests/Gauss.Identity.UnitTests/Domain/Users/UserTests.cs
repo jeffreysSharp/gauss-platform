@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.Events;
+using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.UnitTests.Domain.Users;

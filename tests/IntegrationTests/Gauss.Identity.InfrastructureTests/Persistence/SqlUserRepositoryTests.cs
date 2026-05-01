@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Dapper;
 using Gauss.Identity.Domain.Users;
+using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 using Gauss.Identity.Infrastructure.Persistence;
 using Gauss.Identity.InfrastructureTests.Fixtures;

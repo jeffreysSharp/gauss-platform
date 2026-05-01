@@ -1,4 +1,4 @@
-namespace Gauss.Identity.Domain.Users;
+namespace Gauss.Identity.Domain.Users.Tenancy;
 
 public readonly record struct TenantId(Guid Value)
 {
