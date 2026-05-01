@@ -96,6 +96,16 @@ public sealed class User : AggregateRoot<UserId>
         return new User(snapshot);
     }
 
+    public bool CanAuthenticate(DateTimeOffset utcNow)
+    {
+        if (Status == UserStatus.Locked && LockedUntilUtc > utcNow)
+        {
+            return false;
+        }
+
+        return Status == UserStatus.Active;
+    }
+
     public void ConfirmEmail(DateTimeOffset confirmedAtUtc)
     {
         if (IsEmailConfirmed)
