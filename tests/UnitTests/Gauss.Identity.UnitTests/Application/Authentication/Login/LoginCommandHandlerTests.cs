@@ -168,6 +168,203 @@ public sealed class LoginCommandHandlerTests
         result.Error.Should().Be(LoginErrors.InvalidEmail);
     }
 
+    [Fact(DisplayName = "Should return user unavailable when user is suspended")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Return_UserUnavailable_When_User_Is_Suspended()
+    {
+        // Arrange
+        var suspendedUser = CreateSuspendedUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = suspendedUser
+        };
+
+        var handler = new LoginCommandHandler(
+            userRepository,
+            new FakePasswordHasher { VerificationStatus = PasswordVerificationStatus.Success },
+            new FakeAccessTokenProvider(),
+            new FakeDateTimeProvider());
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(LoginErrors.UserUnavailable);
+    }
+
+    [Fact(DisplayName = "Should return user unavailable when user is locked")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Return_UserUnavailable_When_User_Is_Locked()
+    {
+        // Arrange
+        var lockedUser = CreateLockedUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = lockedUser
+        };
+
+        var handler = new LoginCommandHandler(
+            userRepository,
+            new FakePasswordHasher { VerificationStatus = PasswordVerificationStatus.Success },
+            new FakeAccessTokenProvider(),
+            new FakeDateTimeProvider());
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(LoginErrors.UserUnavailable);
+    }
+
+    [Fact(DisplayName = "Should return user unavailable when user is deactivated")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Return_UserUnavailable_When_User_Is_Deactivated()
+    {
+        // Arrange
+        var deactivatedUser = CreateDeactivatedUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = deactivatedUser
+        };
+
+        var handler = new LoginCommandHandler(
+            userRepository,
+            new FakePasswordHasher { VerificationStatus = PasswordVerificationStatus.Success },
+            new FakeAccessTokenProvider(),
+            new FakeDateTimeProvider());
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(LoginErrors.UserUnavailable);
+    }
+
+    [Fact(DisplayName = "Should return user unavailable when email is not confirmed")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Return_UserUnavailable_When_Email_Is_Not_Confirmed()
+    {
+        // Arrange
+        var user = CreatePendingUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = user
+        };
+
+        var handler = new LoginCommandHandler(
+            userRepository,
+            new FakePasswordHasher { VerificationStatus = PasswordVerificationStatus.Success },
+            new FakeAccessTokenProvider(),
+            new FakeDateTimeProvider());
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(LoginErrors.UserUnavailable);
+    }
+
+    [Fact(DisplayName = "Should update LastLoginAtUtc when login is successful")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Update_LastLoginAtUtc_When_Login_Is_Successful()
+    {
+        // Arrange
+        var user = CreateActiveUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = user
+        };
+
+        var handler = new LoginCommandHandler(
+            userRepository,
+            new FakePasswordHasher { VerificationStatus = PasswordVerificationStatus.Success },
+            new FakeAccessTokenProvider(),
+            new FakeDateTimeProvider());
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        user.LastLoginAtUtc.Should().NotBeNull();
+    }
+
+    private static User CreateDeactivatedUser()
+    {
+        var user = User.Register(
+            TenantId.New(),
+            "Jeferson Almeida",
+            Email.Create("jeferson@gauss.com"),
+            PasswordHash.Create("hashed-password"),
+            new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
+
+        user.Deactivate();
+
+        return user;
+    }
+
+    private static User CreateLockedUser()
+    {
+        var user = User.Register(
+            TenantId.New(),
+            "Jeferson Almeida",
+            Email.Create("jeferson@gauss.com"),
+            PasswordHash.Create("hashed-password"),
+            new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
+
+        user.LockUntil(DateTimeOffset.UtcNow.AddHours(1));
+
+        return user;
+    }
+
+    private static User CreateSuspendedUser()
+    {
+        var user = User.Register(
+            TenantId.New(),
+            "Jeferson Almeida",
+            Email.Create("jeferson@gauss.com"),
+            PasswordHash.Create("hashed-password"),
+            new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
+
+        user.Suspend();
+
+        return user;
+    }
+
     private static User CreateActiveUser()
     {
         var user = User.Register(
