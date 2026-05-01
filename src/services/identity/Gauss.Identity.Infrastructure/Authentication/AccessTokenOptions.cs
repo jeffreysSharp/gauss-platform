@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Gauss.Identity.Infrastructure.Authentication;
 
 public sealed class AccessTokenOptions
