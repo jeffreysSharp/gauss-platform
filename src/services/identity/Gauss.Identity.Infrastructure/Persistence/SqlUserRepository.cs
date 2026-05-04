@@ -1,6 +1,7 @@
 using Dapper;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Domain.Users;
+using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Infrastructure.Persistence;
@@ -169,4 +170,99 @@ public sealed class SqlUserRepository(
             throw;
         }
     }
+
+    public async Task<User?> GetByEmailAsync(
+    Email email,
+    CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+        SELECT
+            [Id],
+            [TenantId],
+            [Name],
+            [Email],
+            [NormalizedEmail],
+            [PasswordHash],
+            [Status],
+            [RegisteredAtUtc],
+            [EmailConfirmedAtUtc],
+            [LastLoginAtUtc],
+            [LockedUntilUtc]
+        FROM [identity].[Users]
+        WHERE [NormalizedEmail] = @NormalizedEmail
+          AND [IsDeleted] = 0;
+        """;
+
+        await using var connection = connectionFactory.CreateConnection();
+
+        var command = new CommandDefinition(
+            sql,
+            new
+            {
+                NormalizedEmail = email.Value
+            },
+            cancellationToken: cancellationToken);
+
+        var record = await connection.QuerySingleOrDefaultAsync<UserPersistenceRecord>(command);
+
+        if (record is null)
+        {
+            return null;
+        }
+
+        var snapshot = new UserSnapshot(
+            UserId.From(record.Id),
+            TenantId.From(record.TenantId),
+            record.Name,
+            Email.Create(record.Email),
+            PasswordHash.Create(record.PasswordHash),
+            (UserStatus)record.Status,
+            record.RegisteredAtUtc,
+            record.EmailConfirmedAtUtc,
+            record.LastLoginAtUtc,
+            record.LockedUntilUtc);
+
+        return User.Rehydrate(snapshot);
+    }
+
+    public async Task UpdateLastLoginAsync(
+    User user,
+    CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+        UPDATE [identity].[Users]
+        SET
+            [LastLoginAtUtc] = @LastLoginAtUtc,
+            [UpdatedAtUtc] = @UpdatedAtUtc
+        WHERE [Id] = @Id
+          AND [IsDeleted] = 0;
+        """;
+
+        await using var connection = connectionFactory.CreateConnection();
+
+        var command = new CommandDefinition(
+            sql,
+            new
+            {
+                Id = user.Id.Value,
+                user.LastLoginAtUtc,
+                UpdatedAtUtc = user.LastLoginAtUtc
+            },
+            cancellationToken: cancellationToken);
+
+        await connection.ExecuteAsync(command);
+    }
+
+    private sealed record UserPersistenceRecord(
+    Guid Id,
+    Guid TenantId,
+    string Name,
+    string Email,
+    string NormalizedEmail,
+    string PasswordHash,
+    int Status,
+    DateTimeOffset RegisteredAtUtc,
+    DateTimeOffset? EmailConfirmedAtUtc,
+    DateTimeOffset? LastLoginAtUtc,
+    DateTimeOffset? LockedUntilUtc);
 }
