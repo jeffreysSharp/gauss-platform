@@ -16,7 +16,12 @@ public sealed class IdentityApiFactory(
         {
             var configuration = new Dictionary<string, string?>
             {
-                ["Identity:Persistence:ConnectionString"] = databaseFixture.ConnectionString
+                ["Identity:Persistence:ConnectionString"] = databaseFixture.ConnectionString,
+
+                ["Identity:AccessToken:Issuer"] = "GAUSS.Identity",
+                ["Identity:AccessToken:Audience"] = "GAUSS.Platform",
+                ["Identity:AccessToken:SecretKey"] = "test-only-secret-key-with-at-least-32-characters",
+                ["Identity:AccessToken:ExpirationMinutes"] = "15"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);
