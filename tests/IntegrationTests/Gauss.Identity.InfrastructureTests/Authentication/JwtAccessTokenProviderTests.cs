@@ -145,34 +145,7 @@ public sealed class JwtAccessTokenProviderTests
         // Assert
         principal.Should().NotBeNull();
         validatedToken.Should().BeOfType<JwtSecurityToken>();
-    }
-
-    [Fact(DisplayName = "Should throw invalid operation exception when secret key is too short")]
-    [Trait("Layer", "Infrastructure")]
-    [Trait("Category", "Authentication")]
-    public void Should_Throw_InvalidOperationException_When_SecretKey_Is_Too_Short()
-    {
-        // Arrange
-        var options = Options.Create(new AccessTokenOptions
-        {
-            Issuer = "GAUSS.Identity",
-            Audience = "GAUSS.Platform",
-            SecretKey = "short-key",
-            ExpirationMinutes = 15
-        });
-
-        var provider = new JwtAccessTokenProvider(
-            options,
-            new FakeDateTimeProvider());
-
-        var user = CreateActiveUser();
-
-        // Act
-        var action = () => provider.Generate(user);
-
-        // Assert
-        action.Should().Throw<InvalidOperationException>();
-    }
+    }   
 
     [Fact(DisplayName = "Should throw argument null exception when user is null")]
     [Trait("Layer", "Infrastructure")]

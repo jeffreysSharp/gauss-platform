@@ -20,8 +20,6 @@ public sealed class JwtAccessTokenProvider(
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        ValidateOptions();
-
         var issuedAtUtc = dateTimeProvider.UtcNow;
         var expiresAtUtc = issuedAtUtc.AddMinutes(_options.ExpirationMinutes);
 
@@ -55,33 +53,5 @@ public sealed class JwtAccessTokenProvider(
             tokenValue,
             "Bearer",
             expiresAtUtc);
-    }
-
-    private void ValidateOptions()
-    {
-        if (string.IsNullOrWhiteSpace(_options.Issuer))
-        {
-            throw new InvalidOperationException("Access token issuer was not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(_options.Audience))
-        {
-            throw new InvalidOperationException("Access token audience was not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(_options.SecretKey))
-        {
-            throw new InvalidOperationException("Access token secret key was not configured.");
-        }
-
-        if (_options.SecretKey.Length < 32)
-        {
-            throw new InvalidOperationException("Access token secret key must have at least 32 characters.");
-        }
-
-        if (_options.ExpirationMinutes <= 0)
-        {
-            throw new InvalidOperationException("Access token expiration must be greater than zero.");
-        }
     }
 }

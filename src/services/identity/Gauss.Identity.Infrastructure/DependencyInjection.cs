@@ -6,6 +6,7 @@ using Gauss.Identity.Infrastructure.Persistence;
 using Gauss.Identity.Infrastructure.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Gauss.Identity.Infrastructure;
 
@@ -15,7 +16,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<IdentityPersistenceOptions>(
+        services
+            .Configure<IdentityPersistenceOptions>(
             configuration.GetSection(IdentityPersistenceOptions.SectionName));
 
         services.AddSingleton<IdentityDbConnectionFactory>();
@@ -26,7 +28,12 @@ public static class DependencyInjection
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
-        services.Configure<AccessTokenOptions>(configuration.GetSection(AccessTokenOptions.SectionName));
+        services
+            .AddOptions<AccessTokenOptions>()
+            .Bind(configuration.GetSection(AccessTokenOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<AccessTokenOptions>, AccessTokenOptionsValidator>();
 
         services.AddSingleton<IAccessTokenProvider, JwtAccessTokenProvider>();
 
