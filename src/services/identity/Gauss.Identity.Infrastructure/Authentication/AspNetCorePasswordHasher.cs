@@ -6,7 +6,7 @@ namespace Gauss.Identity.Infrastructure.Authentication;
 
 public sealed class AspNetCorePasswordHasher : IPasswordHasher
 {
-    private static readonly object User = new();
+    private static readonly object HashingContext = new();
 
     private readonly PasswordHasher<object> _passwordHasher = new();
 
@@ -15,7 +15,7 @@ public sealed class AspNetCorePasswordHasher : IPasswordHasher
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
         var hashedPassword = _passwordHasher.HashPassword(
-            User,
+            HashingContext,
             password);
 
         return PasswordHash.Create(hashedPassword);
@@ -29,7 +29,7 @@ public sealed class AspNetCorePasswordHasher : IPasswordHasher
         ArgumentException.ThrowIfNullOrWhiteSpace(providedPassword);
 
         var verificationResult = _passwordHasher.VerifyHashedPassword(
-            User,
+            HashingContext,
             passwordHash.Value,
             providedPassword);
 
