@@ -1,3 +1,4 @@
+using Gauss.Identity.Api.Endpoints.Authentication;
 using Gauss.Identity.Api.Endpoints.Users;
 
 namespace Gauss.Identity.Api.Endpoints;
@@ -8,6 +9,7 @@ public static class IdentityEndpointExtensions
         this IEndpointRouteBuilder app)
     {
         app.MapRegisterUserEndpoint();
+        app.MapLoginEndpoint();
 
         return app;
     }
