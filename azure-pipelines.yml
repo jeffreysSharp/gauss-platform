@@ -74,6 +74,7 @@ stages:
               --no-build
               --logger "trx;LogFilePrefix=unit-tests"
               --results-directory "$(Agent.TempDirectory)/TestResults"
+              --collect:"XPlat Code Coverage"
               --filter "Layer!=Infrastructure&Layer!=Api"
             displayName: 'Run unit tests'
 
@@ -111,6 +112,7 @@ stages:
               --no-build
               --logger "trx;LogFilePrefix=integration-tests"
               --results-directory "$(Agent.TempDirectory)/TestResults"
+              --collect:"XPlat Code Coverage"
               --filter "Layer=Infrastructure|Layer=Api"
             displayName: 'Run integration and API tests'
             env:
@@ -125,3 +127,10 @@ stages:
               testResultsFormat: 'VSTest'
               testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
               failTaskOnFailedTests: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: 'Publish code coverage results'
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+              pathToSources: '$(Build.SourcesDirectory)'           
