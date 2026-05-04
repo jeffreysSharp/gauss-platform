@@ -4,6 +4,7 @@ using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Domain.Users;
+using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Application.Users.RegisterUser;
