@@ -29,14 +29,15 @@ variables:
   solutionPath: 'Gauss.slnx'
   sqlServerPassword: 'Asd123!!!'
 
-services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    env:
-      ACCEPT_EULA: 'Y'
-      SA_PASSWORD: $(sqlServerPassword)
-    ports:
-      - 1433:1433
+resources:
+  containers:
+    - container: sqlserver
+      image: mcr.microsoft.com/mssql/server:2022-latest
+      env:
+        ACCEPT_EULA: 'Y'
+        MSSQL_SA_PASSWORD: $(sqlServerPassword)
+      ports:
+        - 1433:1433
 
 stages:
   - stage: BuildAndTest
@@ -44,6 +45,10 @@ stages:
     jobs:
       - job: Backend
         displayName: 'Backend CI'
+
+        services:
+          sqlserver: sqlserver
+
         steps:
           - checkout: self
             displayName: 'Checkout repository'
@@ -73,19 +78,31 @@ stages:
             displayName: 'Run unit tests'
 
           - script: |
-              echo "Waiting for SQL Server to be ready..."
+              echo "Waiting for SQL Server container to be ready..."
+
+              containerId=$(docker ps --filter "ancestor=mcr.microsoft.com/mssql/server:2022-latest" --format "{{.ID}}" | head -n 1)
+
+              if [ -z "$containerId" ]; then
+                echo "SQL Server container was not found."
+                docker ps
+                exit 1
+              fi
+
+              echo "SQL Server container id: $containerId"
 
               for i in {1..60}; do
-                /opt/mssql-tools18/bin/sqlcmd \
-                  -S localhost,1433 \
-                  -U sa \
-                  -P "$(sqlServerPassword)" \
-                  -C \
-                  -Q "SELECT 1" && break
+                if docker logs "$containerId" 2>&1 | grep -q "SQL Server is now ready for client connections"; then
+                  echo "SQL Server is ready."
+                  exit 0
+                fi
 
                 echo "SQL Server is not ready yet. Attempt $i/60..."
                 sleep 2
               done
+
+              echo "SQL Server did not become ready in time."
+              docker logs "$containerId"
+              exit 1
             displayName: 'Wait for SQL Server'
 
           - script: >
