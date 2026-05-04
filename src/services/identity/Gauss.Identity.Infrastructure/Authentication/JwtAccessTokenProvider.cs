@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -33,7 +31,7 @@ public sealed class JwtAccessTokenProvider(
             new(JwtRegisteredClaimNames.Email, user.Email.Value),
             new(JwtRegisteredClaimNames.Name, user.Name),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
-            new("tenant_id", user.TenantId.Value.ToString())
+            new(GaussClaimTypes.TenantId, user.TenantId.Value.ToString())
         };
 
         var securityKey = new SymmetricSecurityKey(
