@@ -1,0 +1,71 @@
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+      - '**/*.md'
+
+pr:
+  branches:
+    include:
+      - develop
+      - main
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+      - '**/*.md'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetSdkVersion: '10.0.x'
+  solutionPath: '**/*.sln'
+
+stages:
+  - stage: BuildAndTest
+    displayName: 'Build and Test'
+    jobs:
+      - job: Backend
+        displayName: 'Backend CI'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: UseDotNet@2
+            displayName: 'Use .NET SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '$(dotnetSdkVersion)'
+
+          - script: dotnet --info
+            displayName: 'Show .NET information'
+
+          - script: dotnet restore "$(solutionPath)"
+            displayName: 'Restore solution'
+
+          - script: dotnet build "$(solutionPath)" --configuration "$(buildConfiguration)" --no-restore
+            displayName: 'Build solution'
+
+          - script: >
+              dotnet test "$(solutionPath)"
+              --configuration "$(buildConfiguration)"
+              --no-build
+              --logger "trx"
+              --results-directory "$(Agent.TempDirectory)/TestResults"
+              --filter "Layer!=Infrastructure&Layer!=Api"
+            displayName: 'Run unit tests'
+
+          - task: PublishTestResults@2
+            displayName: 'Publish unit test results'
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'VSTest'
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+              failTaskOnFailedTests: true
