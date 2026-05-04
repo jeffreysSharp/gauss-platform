@@ -27,6 +27,16 @@ variables:
   buildConfiguration: 'Release'
   dotnetSdkVersion: '10.0.x'
   solutionPath: 'Gauss.slnx'
+  sqlServerPassword: 'Asd123!!!'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    env:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: $(sqlServerPassword)
+    ports:
+      - 1433:1433
 
 stages:
   - stage: BuildAndTest
@@ -57,13 +67,42 @@ stages:
               dotnet test "$(solutionPath)"
               --configuration "$(buildConfiguration)"
               --no-build
-              --logger "trx"
+              --logger "trx;LogFilePrefix=unit-tests"
               --results-directory "$(Agent.TempDirectory)/TestResults"
               --filter "Layer!=Infrastructure&Layer!=Api"
             displayName: 'Run unit tests'
 
+          - script: |
+              echo "Waiting for SQL Server to be ready..."
+
+              for i in {1..60}; do
+                /opt/mssql-tools18/bin/sqlcmd \
+                  -S localhost,1433 \
+                  -U sa \
+                  -P "$(sqlServerPassword)" \
+                  -C \
+                  -Q "SELECT 1" && break
+
+                echo "SQL Server is not ready yet. Attempt $i/60..."
+                sleep 2
+              done
+            displayName: 'Wait for SQL Server'
+
+          - script: >
+              dotnet test "$(solutionPath)"
+              --configuration "$(buildConfiguration)"
+              --no-build
+              --logger "trx;LogFilePrefix=integration-tests"
+              --results-directory "$(Agent.TempDirectory)/TestResults"
+              --filter "Layer=Infrastructure|Layer=Api"
+            displayName: 'Run integration and API tests'
+            env:
+              GAUSS_TEST_SQLSERVER_HOST: 'localhost,1433'
+              GAUSS_TEST_SQLSERVER_USER: 'sa'
+              GAUSS_TEST_SQLSERVER_PASSWORD: '$(sqlServerPassword)'
+
           - task: PublishTestResults@2
-            displayName: 'Publish unit test results'
+            displayName: 'Publish test results'
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'VSTest'

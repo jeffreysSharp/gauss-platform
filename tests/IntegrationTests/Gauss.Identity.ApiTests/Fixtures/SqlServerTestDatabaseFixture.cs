@@ -6,23 +6,40 @@ namespace Gauss.Identity.ApiTests.Fixtures;
 
 public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
 {
+    private const string DefaultSqlServerHost = @".\SQLEXPRESS";
+    private const string DefaultSqlServerUser = "sa";
+    private const string DefaultSqlServerPassword = "Asd123!!!";
+
     private readonly string _databaseName = $"Gauss_IdentityApiTests_{Guid.NewGuid():N}";
 
-    public string ConnectionString =>
-        $"Server=.\\SQLEXPRESS;Database={_databaseName};User ID=sa;Password=Asd123!!!;TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;";
+    public string ConnectionString => CreateConnectionString(_databaseName);
 
-    private string MasterConnectionString =>
-        "Server=.\\SQLEXPRESS;Database=master;User ID=sa;Password=Asd123!!!;TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;";
+    private string MasterConnectionString => CreateConnectionString("master");
 
     public async Task InitializeAsync()
     {
         await CreateDatabaseAsync();
+
         RunMigrations();
     }
 
     public async Task DisposeAsync()
     {
         await DropDatabaseAsync();
+    }
+
+    private static string CreateConnectionString(string databaseName)
+    {
+        var host = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_HOST")
+            ?? DefaultSqlServerHost;
+
+        var user = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_USER")
+            ?? DefaultSqlServerUser;
+
+        var password = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_PASSWORD")
+            ?? DefaultSqlServerPassword;
+
+        return $"Server={host};Database={databaseName};User ID={user};Password={password};TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;";
     }
 
     private async Task CreateDatabaseAsync()
