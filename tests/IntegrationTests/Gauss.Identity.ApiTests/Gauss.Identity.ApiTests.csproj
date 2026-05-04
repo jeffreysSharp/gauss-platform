@@ -24,8 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Services\Identity\Gauss.Identity.Api\Gauss.Identity.Api.csproj" />
-    <ProjectReference Include="..\..\..\src\Database\Gauss.Database.Migrations\Gauss.Database.Migrations.csproj" />
+    <ProjectReference Include="..\..\..\src\services\identity\Gauss.Identity.Api\Gauss.Identity.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\database\Gauss.Database.Migrations\Gauss.Database.Migrations.csproj" />
   </ItemGroup>
 
 </Project>
