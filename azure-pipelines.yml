@@ -40,15 +40,11 @@ resources:
         - 1433:1433
 
 stages:
-  - stage: BuildAndTest
-    displayName: 'Build and Test'
+  - stage: Build
+    displayName: 'Build'
     jobs:
-      - job: Backend
-        displayName: 'Backend CI'
-
-        services:
-          sqlserver: sqlserver
-
+      - job: BuildBackend
+        displayName: 'Build Backend'
         steps:
           - checkout: self
             displayName: 'Checkout repository'
@@ -68,15 +64,71 @@ stages:
           - script: dotnet build "$(solutionPath)" --configuration "$(buildConfiguration)" --no-restore
             displayName: 'Build solution'
 
+  - stage: UnitTests
+    displayName: 'Unit Tests'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: RunUnitTests
+        displayName: 'Run Unit Tests'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: UseDotNet@2
+            displayName: 'Use .NET SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '$(dotnetSdkVersion)'
+
+          - script: dotnet restore "$(solutionPath)"
+            displayName: 'Restore solution'
+
           - script: >
               dotnet test "$(solutionPath)"
               --configuration "$(buildConfiguration)"
-              --no-build
               --logger "trx;LogFilePrefix=unit-tests"
               --results-directory "$(Agent.TempDirectory)/TestResults"
               --collect:"XPlat Code Coverage"
               --filter "Layer!=Infrastructure&Layer!=Api"
             displayName: 'Run unit tests'
+
+          - task: PublishTestResults@2
+            displayName: 'Publish unit test results'
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'VSTest'
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+              failTaskOnFailedTests: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: 'Publish unit test coverage'
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+              pathToSources: '$(Build.SourcesDirectory)'
+
+  - stage: IntegrationTests
+    displayName: 'Integration and API Tests'
+    dependsOn: UnitTests
+    condition: succeeded()
+    jobs:
+      - job: RunIntegrationTests
+        displayName: 'Run Integration and API Tests'
+        services:
+          sqlserver: sqlserver
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: UseDotNet@2
+            displayName: 'Use .NET SDK'
+            inputs:
+              packageType: 'sdk'
+              version: '$(dotnetSdkVersion)'
+
+          - script: dotnet restore "$(solutionPath)"
+            displayName: 'Restore solution'
 
           - script: |
               echo "Waiting for SQL Server container to be ready..."
@@ -109,7 +161,6 @@ stages:
           - script: >
               dotnet test "$(solutionPath)"
               --configuration "$(buildConfiguration)"
-              --no-build
               --logger "trx;LogFilePrefix=integration-tests"
               --results-directory "$(Agent.TempDirectory)/TestResults"
               --collect:"XPlat Code Coverage"
@@ -121,7 +172,7 @@ stages:
               GAUSS_TEST_SQLSERVER_PASSWORD: '$(sqlServerPassword)'
 
           - task: PublishTestResults@2
-            displayName: 'Publish test results'
+            displayName: 'Publish integration and API test results'
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'VSTest'
@@ -129,8 +180,8 @@ stages:
               failTaskOnFailedTests: true
 
           - task: PublishCodeCoverageResults@2
-            displayName: 'Publish code coverage results'
+            displayName: 'Publish integration and API test coverage'
             condition: succeededOrFailed()
             inputs:
               summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
-              pathToSources: '$(Build.SourcesDirectory)'           
+              pathToSources: '$(Build.SourcesDirectory)'
