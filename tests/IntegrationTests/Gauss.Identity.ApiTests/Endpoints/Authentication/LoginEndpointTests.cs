@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Dapper;
 using Gauss.Identity.ApiTests.Fixtures;
 using Gauss.Identity.Domain.Users;
+using Gauss.Testing.Api;
 using Microsoft.Data.SqlClient;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Authentication;
@@ -39,25 +40,14 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
-            HttpStatusCode.OK,
-            because: content);
+        await response.ShouldHaveStatusCodeAsync(HttpStatusCode.OK);
 
-        response.Headers.TryGetValues("X-Correlation-Id", out var correlationIds)
-            .Should()
-            .BeTrue(because: content);
+        response.ShouldHaveCorrelationId();
 
-        correlationIds.Should().NotBeNull();
-        correlationIds!.Single().Should().NotBeNullOrWhiteSpace();
+        await response.ShouldNotExposeSensitiveAuthenticationDataAsync();
 
-        content.Should().NotContain("password", because: "the API must not expose plain text passwords");
-        content.Should().NotContain("passwordHash", because: "the API must not expose password hashes");
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
+        var root = await response.ReadJsonRootElementAsync();
 
         root.GetProperty("userId").GetGuid().Should().NotBe(Guid.Empty);
         root.GetProperty("tenantId").GetGuid().Should().NotBe(Guid.Empty);
@@ -95,19 +85,11 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.Unauthorized,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(401);
-        root.GetProperty("title").GetString().Should().Be("Unauthorized");
-        root.GetProperty("code").GetString().Should().Be("Identity.Login.InvalidCredentials");
+            "Unauthorized",
+            "Identity.Login.InvalidCredentials");
     }
 
     [Fact(DisplayName = "Should return unauthorized when user does not exist")]
@@ -130,19 +112,11 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.Unauthorized,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(401);
-        root.GetProperty("title").GetString().Should().Be("Unauthorized");
-        root.GetProperty("code").GetString().Should().Be("Identity.Login.InvalidCredentials");
+            "Unauthorized",
+            "Identity.Login.InvalidCredentials");
     }
 
     [Fact(DisplayName = "Should return forbidden when user is not active")]
@@ -170,19 +144,11 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.Forbidden,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(403);
-        root.GetProperty("title").GetString().Should().Be("Forbidden");
-        root.GetProperty("code").GetString().Should().Be("Identity.Login.UserUnavailable");
+            "Forbidden",
+            "Identity.Login.UserUnavailable");
     }
 
     [Fact(DisplayName = "Should return bad request when email is invalid")]
@@ -205,20 +171,12 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.BadRequest,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(400);
-        root.GetProperty("title").GetString().Should().Be("Validation Error");
-        root.GetProperty("code").GetString().Should().Be("Identity.Login.EmailInvalid");
-        root.GetProperty("detail").GetString().Should().Contain("Email");
+            "Validation Error",
+            "Identity.Login.EmailInvalid",
+            "Email");
     }
 
     [Fact(DisplayName = "Should return bad request when password is empty")]
@@ -241,20 +199,12 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/login",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.BadRequest,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(400);
-        root.GetProperty("title").GetString().Should().Be("Validation Error");
-        root.GetProperty("code").GetString().Should().Be("Identity.Login.PasswordRequired");
-        root.GetProperty("detail").GetString().Should().Contain("Password");
+            "Validation Error",
+            "Identity.Login.PasswordRequired",
+            "Password");
     }
 
     private static async Task RegisterUserAsync(
@@ -273,11 +223,7 @@ public sealed class LoginEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
-        response.StatusCode.Should().Be(
-            HttpStatusCode.Created,
-            because: content);
+        await response.ShouldHaveStatusCodeAsync(HttpStatusCode.Created);
     }
 
     private async Task ActivateUserAsync(string email)
