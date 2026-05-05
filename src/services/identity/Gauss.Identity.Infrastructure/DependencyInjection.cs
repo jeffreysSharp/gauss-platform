@@ -37,6 +37,13 @@ public static class DependencyInjection
 
         services.AddSingleton<IAccessTokenProvider, JwtAccessTokenProvider>();
 
+        services
+            .AddOptions<RefreshTokenOptions>()
+            .Bind(configuration.GetSection(RefreshTokenOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<IValidateOptions<RefreshTokenOptions>, RefreshTokenOptionsValidator>();
+
         return services;
     }
 }

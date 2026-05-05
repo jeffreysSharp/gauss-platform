@@ -21,7 +21,9 @@ public sealed class IdentityApiFactory(
                 ["Identity:AccessToken:Issuer"] = "GAUSS.Identity",
                 ["Identity:AccessToken:Audience"] = "GAUSS.Platform",
                 ["Identity:AccessToken:SecretKey"] = "test-only-secret-key-with-at-least-32-characters",
-                ["Identity:AccessToken:ExpirationMinutes"] = "15"
+                ["Identity:AccessToken:ExpirationMinutes"] = "15",
+
+                ["Identity:RefreshToken:ExpirationMinutes"] = "10080"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);
