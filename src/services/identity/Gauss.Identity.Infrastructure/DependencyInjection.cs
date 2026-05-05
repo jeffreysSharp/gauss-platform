@@ -46,6 +46,8 @@ public static class DependencyInjection
 
         services.AddSingleton<IRefreshTokenGenerator, SecureRefreshTokenGenerator>();
 
+        services.AddSingleton<IRefreshTokenHasher, Sha256RefreshTokenHasher>();
+
         return services;
     }
 }
