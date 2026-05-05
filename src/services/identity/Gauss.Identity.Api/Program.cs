@@ -18,6 +18,10 @@ app.MapGaussOpenApi();
 
 app.MapGaussHealthChecks();
 
+app.UseAuthentication();
+
+app.UseAuthorization();
+
 app.MapIdentityEndpoints();
 
 await app.RunAsync();
