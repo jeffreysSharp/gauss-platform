@@ -44,6 +44,8 @@ public static class DependencyInjection
 
         services.AddSingleton<IValidateOptions<RefreshTokenOptions>, RefreshTokenOptionsValidator>();
 
+        services.AddSingleton<IRefreshTokenGenerator, SecureRefreshTokenGenerator>();
+
         return services;
     }
 }
