@@ -10,6 +10,7 @@ public static class IdentityEndpointExtensions
     {
         app.MapRegisterUserEndpoint();
         app.MapLoginEndpoint();
+        app.MapCurrentUserEndpoint();
 
         return app;
     }
