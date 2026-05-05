@@ -4,6 +4,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Dapper;
 using Gauss.Identity.ApiTests.Fixtures;
+using Gauss.Testing.Api;
 using Microsoft.Data.SqlClient;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Users;
@@ -33,27 +34,16 @@ public sealed class RegisterUserEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
-            HttpStatusCode.Created,
-            because: content);
+        await response.ShouldHaveStatusCodeAsync(HttpStatusCode.Created);
 
         response.Headers.Location.Should().NotBeNull();
 
-        response.Headers.TryGetValues("X-Correlation-Id", out var correlationIds)
-            .Should()
-            .BeTrue(because: content);
+        response.ShouldHaveCorrelationId();
 
-        correlationIds.Should().NotBeNull();
-        correlationIds!.Single().Should().NotBeNullOrWhiteSpace();
+        await response.ShouldNotExposeSensitiveAuthenticationDataAsync();
 
-        content.Should().NotContain("password", because: "the API must not expose plain text passwords");
-        content.Should().NotContain("passwordHash", because: "the API must not expose password hashes");
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
+        var root = await response.ReadJsonRootElementAsync();
 
         root.GetProperty("userId").GetGuid().Should().NotBe(Guid.Empty);
         root.GetProperty("tenantId").GetGuid().Should().NotBe(Guid.Empty);
@@ -85,51 +75,18 @@ public sealed class RegisterUserEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var firstContent = await firstResponse.Content.ReadAsStringAsync();
-
-        firstResponse.StatusCode.Should().Be(
-            HttpStatusCode.Created,
-            because: firstContent);
+        await firstResponse.ShouldHaveStatusCodeAsync(HttpStatusCode.Created);
 
         // Act
         using var response = await client.PostAsJsonAsync(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(
+        await response.ShouldBeProblemDetailsAsync(
             HttpStatusCode.Conflict,
-            because: content);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(409);
-        root.GetProperty("title").GetString().Should().Be("Conflict");
-        root.GetProperty("code").GetString().Should().Be("Identity.User.EmailAlreadyExists");
-    }
-
-    private async Task AssertUserWasPersistedAsync(string email)
-    {
-        await using var connection = new SqlConnection(databaseFixture.ConnectionString);
-
-        const string sql = """
-            SELECT COUNT(1)
-            FROM [identity].[Users]
-            WHERE [NormalizedEmail] = @NormalizedEmail
-              AND [IsDeleted] = 0;
-            """;
-
-        var count = await connection.ExecuteScalarAsync<int>(
-            sql,
-            new
-            {
-                NormalizedEmail = email.ToLowerInvariant()
-            });
-
-        count.Should().Be(1);
+            "Conflict",
+            "Identity.User.EmailAlreadyExists");
     }
 
     [Fact(DisplayName = "Should return bad request when name is invalid")]
@@ -153,18 +110,12 @@ public sealed class RegisterUserEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(400);
-        root.GetProperty("title").GetString().Should().Be("Validation Error");
-        root.GetProperty("code").GetString().Should().Be("Identity.User.NameRequired");
-        root.GetProperty("detail").GetString().Should().Contain("Name");
+        await response.ShouldBeProblemDetailsAsync(
+            HttpStatusCode.BadRequest,
+            "Validation Error",
+            "Identity.User.NameRequired",
+            "Name");
     }
 
     [Fact(DisplayName = "Should return bad request when email is invalid")]
@@ -179,7 +130,7 @@ public sealed class RegisterUserEndpointTests(
         var request = new
         {
             Name = "Jeferson Almeida",
-            Email = "invalid-email",  // Invalid email format
+            Email = "invalid-email",
             Password = "StrongPassword@123"
         };
 
@@ -188,18 +139,12 @@ public sealed class RegisterUserEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
-
-        root.GetProperty("status").GetInt32().Should().Be(400);
-        root.GetProperty("title").GetString().Should().Be("Validation Error");
-        root.GetProperty("code").GetString().Should().Be("Identity.User.EmailInvalid");
-        root.GetProperty("detail").GetString().Should().Contain("Email");
+        await response.ShouldBeProblemDetailsAsync(
+            HttpStatusCode.BadRequest,
+            "Validation Error",
+            "Identity.User.EmailInvalid",
+            "Email");
     }
 
     [Fact(DisplayName = "Should return bad request when password is weak")]
@@ -215,7 +160,7 @@ public sealed class RegisterUserEndpointTests(
         {
             Name = "Jeferson Almeida",
             Email = $"jeferson-{Guid.NewGuid():N}@gauss.com",
-            Password = "weakpassword"  // Password without complexity (no special char, number, etc.)
+            Password = "weakpassword"
         };
 
         // Act
@@ -223,17 +168,32 @@ public sealed class RegisterUserEndpointTests(
             "/api/v1/identity/register",
             request);
 
-        var content = await response.Content.ReadAsStringAsync();
-
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await response.ShouldBeProblemDetailsAsync(
+            HttpStatusCode.BadRequest,
+            "Validation Error",
+            "Identity.User.PasswordRequiresUppercase",
+            "Password");
+    }
 
-        using var jsonDocument = JsonDocument.Parse(content);
-        var root = jsonDocument.RootElement;
+    private async Task AssertUserWasPersistedAsync(string email)
+    {
+        await using var connection = new SqlConnection(databaseFixture.ConnectionString);
 
-        root.GetProperty("status").GetInt32().Should().Be(400);
-        root.GetProperty("title").GetString().Should().Be("Validation Error");
-        root.GetProperty("code").GetString().Should().Be("Identity.User.PasswordRequiresUppercase");
-        root.GetProperty("detail").GetString().Should().Contain("Password");
+        const string sql = """
+            SELECT COUNT(1)
+            FROM [identity].[Users]
+            WHERE [NormalizedEmail] = @NormalizedEmail
+              AND [IsDeleted] = 0;
+            """;
+
+        var count = await connection.ExecuteScalarAsync<int>(
+            sql,
+            new
+            {
+                NormalizedEmail = email.ToLowerInvariant()
+            });
+
+        count.Should().Be(1);
     }
 }

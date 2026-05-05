@@ -1,8 +1,10 @@
 namespace Gauss.Identity.Infrastructure.Authentication;
 
-public sealed class AccessTokenOptions
+public sealed record AccessTokenOptions
 {
     public const string SectionName = "Identity:AccessToken";
+
+    public const int MinimumSecretKeyLength = 32;
 
     public string Issuer { get; init; } = string.Empty;
 
