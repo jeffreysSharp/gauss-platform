@@ -23,7 +23,8 @@ public sealed class IdentityApiFactory(
                 ["Identity:AccessToken:SecretKey"] = "test-only-secret-key-with-at-least-32-characters",
                 ["Identity:AccessToken:ExpirationMinutes"] = "15",
 
-                ["Identity:RefreshToken:ExpirationMinutes"] = "10080"
+                ["Identity:RefreshToken:ExpirationMinutes"] = "10080",
+                ["Identity:Redis:ConnectionString"] = "localhost:6379"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);
