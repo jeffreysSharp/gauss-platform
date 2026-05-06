@@ -7,26 +7,25 @@ using Gauss.Identity.Domain.Users.ValueObjects;
 namespace Gauss.Identity.Infrastructure.Persistence;
 
 public sealed class SqlUserRepository(
-    IdentityDbConnectionFactory connectionFactory)
-    : IUserRepository
+    IdentityDbConnectionFactory connectionFactory) : IUserRepository
 {
     public async Task<bool> ExistsByEmailAsync(
         Email email,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-             SELECT CAST(
-                 CASE
+            SELECT CAST(
+                CASE
                     WHEN EXISTS (
                         SELECT 1
                         FROM [identity].[Users]
                         WHERE [NormalizedEmail] = @NormalizedEmail
                           AND [IsDeleted] = 0
-                     )
-                     THEN 1
-                     ELSE 0
+                    )
+                    THEN 1
+                    ELSE 0
                 END AS bit);
-             """;
+            """;
 
         await using var connection = connectionFactory.CreateConnection();
 
@@ -39,6 +38,84 @@ public sealed class SqlUserRepository(
             cancellationToken: cancellationToken);
 
         return await connection.ExecuteScalarAsync<bool>(command);
+    }
+
+    public async Task<User?> GetByEmailAsync(
+        Email email,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                [Id],
+                [TenantId],
+                [Name],
+                [Email],
+                [NormalizedEmail],
+                [PasswordHash],
+                [Status],
+                [RegisteredAtUtc],
+                [EmailConfirmedAtUtc],
+                [LastLoginAtUtc],
+                [LockedUntilUtc]
+            FROM [identity].[Users]
+            WHERE [NormalizedEmail] = @NormalizedEmail
+              AND [IsDeleted] = 0;
+            """;
+
+        await using var connection = connectionFactory.CreateConnection();
+
+        var command = new CommandDefinition(
+            sql,
+            new
+            {
+                NormalizedEmail = email.Value
+            },
+            cancellationToken: cancellationToken);
+
+        var record = await connection.QuerySingleOrDefaultAsync<UserPersistenceRecord>(command);
+
+        return record is null
+            ? null
+            : MapToUser(record);
+    }
+
+    public async Task<User?> GetByIdAsync(
+        UserId userId,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                [Id],
+                [TenantId],
+                [Name],
+                [Email],
+                [NormalizedEmail],
+                [PasswordHash],
+                [Status],
+                [RegisteredAtUtc],
+                [EmailConfirmedAtUtc],
+                [LastLoginAtUtc],
+                [LockedUntilUtc]
+            FROM [identity].[Users]
+            WHERE [Id] = @Id
+              AND [IsDeleted] = 0;
+            """;
+
+        await using var connection = connectionFactory.CreateConnection();
+
+        var command = new CommandDefinition(
+            sql,
+            new
+            {
+                Id = userId.Value
+            },
+            cancellationToken: cancellationToken);
+
+        var record = await connection.QuerySingleOrDefaultAsync<UserPersistenceRecord>(command);
+
+        return record is null
+            ? null
+            : MapToUser(record);
     }
 
     public async Task AddAsync(
@@ -113,6 +190,7 @@ public sealed class SqlUserRepository(
             """;
 
         await using var connection = connectionFactory.CreateConnection();
+
         await connection.OpenAsync(cancellationToken);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -120,7 +198,6 @@ public sealed class SqlUserRepository(
         try
         {
             var now = user.RegisteredAtUtc;
-
             var tenantSlug = user.TenantId.Value.ToString("N");
 
             var tenantParameters = new
@@ -167,76 +244,23 @@ public sealed class SqlUserRepository(
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
+
             throw;
         }
     }
 
-    public async Task<User?> GetByEmailAsync(
-    Email email,
-    CancellationToken cancellationToken = default)
-    {
-        const string sql = """
-        SELECT
-            [Id],
-            [TenantId],
-            [Name],
-            [Email],
-            [NormalizedEmail],
-            [PasswordHash],
-            [Status],
-            [RegisteredAtUtc],
-            [EmailConfirmedAtUtc],
-            [LastLoginAtUtc],
-            [LockedUntilUtc]
-        FROM [identity].[Users]
-        WHERE [NormalizedEmail] = @NormalizedEmail
-          AND [IsDeleted] = 0;
-        """;
-
-        await using var connection = connectionFactory.CreateConnection();
-
-        var command = new CommandDefinition(
-            sql,
-            new
-            {
-                NormalizedEmail = email.Value
-            },
-            cancellationToken: cancellationToken);
-
-        var record = await connection.QuerySingleOrDefaultAsync<UserPersistenceRecord>(command);
-
-        if (record is null)
-        {
-            return null;
-        }
-
-        var snapshot = new UserSnapshot(
-            UserId.From(record.Id),
-            TenantId.From(record.TenantId),
-            record.Name,
-            Email.Create(record.Email),
-            PasswordHash.Create(record.PasswordHash),
-            (UserStatus)record.Status,
-            record.RegisteredAtUtc,
-            record.EmailConfirmedAtUtc,
-            record.LastLoginAtUtc,
-            record.LockedUntilUtc);
-
-        return User.Rehydrate(snapshot);
-    }
-
     public async Task UpdateLastLoginAsync(
-    User user,
-    CancellationToken cancellationToken = default)
+        User user,
+        CancellationToken cancellationToken = default)
     {
         const string sql = """
-        UPDATE [identity].[Users]
-        SET
-            [LastLoginAtUtc] = @LastLoginAtUtc,
-            [UpdatedAtUtc] = @UpdatedAtUtc
-        WHERE [Id] = @Id
-          AND [IsDeleted] = 0;
-        """;
+            UPDATE [identity].[Users]
+            SET
+                [LastLoginAtUtc] = @LastLoginAtUtc,
+                [UpdatedAtUtc] = @UpdatedAtUtc
+            WHERE [Id] = @Id
+              AND [IsDeleted] = 0;
+            """;
 
         await using var connection = connectionFactory.CreateConnection();
 
@@ -253,16 +277,34 @@ public sealed class SqlUserRepository(
         await connection.ExecuteAsync(command);
     }
 
+    private static User MapToUser(
+        UserPersistenceRecord record)
+    {
+        var snapshot = new UserSnapshot(
+            UserId.From(record.Id),
+            TenantId.From(record.TenantId),
+            record.Name,
+            Email.Create(record.Email),
+            PasswordHash.Create(record.PasswordHash),
+            (UserStatus)record.Status,
+            record.RegisteredAtUtc,
+            record.EmailConfirmedAtUtc,
+            record.LastLoginAtUtc,
+            record.LockedUntilUtc);
+
+        return User.Rehydrate(snapshot);
+    }
+
     private sealed record UserPersistenceRecord(
-    Guid Id,
-    Guid TenantId,
-    string Name,
-    string Email,
-    string NormalizedEmail,
-    string PasswordHash,
-    int Status,
-    DateTimeOffset RegisteredAtUtc,
-    DateTimeOffset? EmailConfirmedAtUtc,
-    DateTimeOffset? LastLoginAtUtc,
-    DateTimeOffset? LockedUntilUtc);
+        Guid Id,
+        Guid TenantId,
+        string Name,
+        string Email,
+        string NormalizedEmail,
+        string PasswordHash,
+        int Status,
+        DateTimeOffset RegisteredAtUtc,
+        DateTimeOffset? EmailConfirmedAtUtc,
+        DateTimeOffset? LastLoginAtUtc,
+        DateTimeOffset? LockedUntilUtc);
 }

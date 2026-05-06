@@ -39,6 +39,11 @@ resources:
       ports:
         - 1433:1433
 
+    - container: redis
+      image: redis:7-alpine
+      ports:
+        - 6379:6379
+
 stages:
   - stage: Build
     displayName: 'Build'
@@ -117,6 +122,8 @@ stages:
         displayName: 'Run Integration and API Tests'
         services:
           sqlserver: sqlserver
+          redis: redis
+
         steps:
           - checkout: self
             displayName: 'Checkout repository'
@@ -131,7 +138,7 @@ stages:
             displayName: 'Restore solution'
 
           - script: |
-              echo "Waiting for SQL Server container to be ready..."
+              echo "Waiting for SQL Server container to be ready."
 
               containerId=$(docker ps --filter "ancestor=mcr.microsoft.com/mssql/server:2022-latest" --format "{{.ID}}" | head -n 1)
 
@@ -158,6 +165,34 @@ stages:
               exit 1
             displayName: 'Wait for SQL Server'
 
+          - script: |
+              echo "Waiting for Redis container to be ready."
+
+              containerId=$(docker ps --filter "ancestor=redis:7-alpine" --format "{{.ID}}" | head -n 1)
+
+              if [ -z "$containerId" ]; then
+                echo "Redis container was not found."
+                docker ps
+                exit 1
+              fi
+
+              echo "Redis container id: $containerId"
+
+              for i in {1..30}; do
+                if docker exec "$containerId" redis-cli ping | grep -q "PONG"; then
+                  echo "Redis is ready."
+                  exit 0
+                fi
+
+                echo "Redis is not ready yet. Attempt $i/30..."
+                sleep 1
+              done
+
+              echo "Redis did not become ready in time."
+              docker logs "$containerId"
+              exit 1
+            displayName: 'Wait for Redis'
+
           - script: >
               dotnet test "$(solutionPath)"
               --configuration "$(buildConfiguration)"
@@ -170,6 +205,7 @@ stages:
               GAUSS_TEST_SQLSERVER_HOST: 'localhost,1433'
               GAUSS_TEST_SQLSERVER_USER: 'sa'
               GAUSS_TEST_SQLSERVER_PASSWORD: '$(sqlServerPassword)'
+              GAUSS_TEST_REDIS_CONNECTION_STRING: 'localhost:6379,abortConnect=false,allowAdmin=true'
 
           - task: PublishTestResults@2
             displayName: 'Publish integration and API test results'
