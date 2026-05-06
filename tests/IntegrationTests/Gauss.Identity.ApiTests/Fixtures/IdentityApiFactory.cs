@@ -21,7 +21,13 @@ public sealed class IdentityApiFactory(
                 ["Identity:AccessToken:Issuer"] = "GAUSS.Identity",
                 ["Identity:AccessToken:Audience"] = "GAUSS.Platform",
                 ["Identity:AccessToken:SecretKey"] = "test-only-secret-key-with-at-least-32-characters",
-                ["Identity:AccessToken:ExpirationMinutes"] = "15"
+                ["Identity:AccessToken:ExpirationMinutes"] = "15",
+
+                ["Identity:RefreshToken:ExpirationMinutes"] = "10080",
+
+                ["Identity:Redis:ConnectionString"] =
+                    Environment.GetEnvironmentVariable("GAUSS_TEST_REDIS_CONNECTION_STRING")  ??
+                        "localhost:6379,abortConnect=false,allowAdmin=true"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);

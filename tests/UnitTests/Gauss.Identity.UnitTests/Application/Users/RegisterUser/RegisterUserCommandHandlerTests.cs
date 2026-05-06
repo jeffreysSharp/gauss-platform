@@ -151,6 +151,13 @@ public sealed class RegisterUserCommandHandlerTests
         {
             return Task.CompletedTask;
         }
+
+        public Task<User?> GetByIdAsync(
+            UserId userId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<User?>(null);
+        }
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher

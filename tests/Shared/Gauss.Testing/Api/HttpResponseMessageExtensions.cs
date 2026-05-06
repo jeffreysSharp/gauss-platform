@@ -45,7 +45,7 @@ public static class HttpResponseMessageExtensions
     }
 
     public static async Task ShouldNotExposeSensitiveAuthenticationDataAsync(
-        this HttpResponseMessage response)
+    this HttpResponseMessage response)
     {
         var content = await response.ReadContentAsStringAsync();
 
@@ -56,6 +56,10 @@ public static class HttpResponseMessageExtensions
         content.Should().NotContain(
             "passwordHash",
             because: "the API must not expose password hashes");
+
+        content.Should().NotContain(
+            "refreshTokenHash",
+            because: "the API must not expose refresh token hashes");
     }
 
     public static async Task ShouldBeProblemDetailsAsync(
