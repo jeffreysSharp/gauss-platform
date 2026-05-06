@@ -24,7 +24,10 @@ public sealed class IdentityApiFactory(
                 ["Identity:AccessToken:ExpirationMinutes"] = "15",
 
                 ["Identity:RefreshToken:ExpirationMinutes"] = "10080",
-                ["Identity:Redis:ConnectionString"] = "localhost:6379"
+
+                ["Identity:Redis:ConnectionString"] =
+                    Environment.GetEnvironmentVariable("GAUSS_TEST_REDIS_CONNECTION_STRING")  ??
+                        "localhost:6379,abortConnect=false,allowAdmin=true"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);
