@@ -3,6 +3,7 @@ using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
+using Gauss.Identity.Application.Authentication.RefreshTokens;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Application.Authentication.Login;
@@ -11,6 +12,9 @@ public sealed class LoginCommandHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     IAccessTokenProvider accessTokenProvider,
+    IRefreshTokenGenerator refreshTokenGenerator,
+    IRefreshTokenHasher refreshTokenHasher,
+    IRefreshTokenStore refreshTokenStore,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<LoginCommand, LoginResponse>
 {
@@ -49,18 +53,36 @@ public sealed class LoginCommandHandler(
             return Result<LoginResponse>.Failure(LoginErrors.InvalidCredentials);
         }
 
-        if (!user.CanAuthenticate(dateTimeProvider.UtcNow))
+        var utcNow = dateTimeProvider.UtcNow;
+
+        if (!user.CanAuthenticate(utcNow))
         {
             return Result<LoginResponse>.Failure(LoginErrors.UserUnavailable);
         }
 
-        user.RegisterSuccessfulLogin(dateTimeProvider.UtcNow);
+        user.RegisterSuccessfulLogin(utcNow);
 
         await userRepository.UpdateLastLoginAsync(
             user,
             cancellationToken);
 
         var accessToken = accessTokenProvider.Generate(user);
+
+        var refreshToken = refreshTokenGenerator.Generate(utcNow);
+
+        var refreshTokenHash = refreshTokenHasher.Hash(refreshToken.Value);
+
+        var refreshTokenSession = new RefreshTokenSession(
+            SessionId: Guid.NewGuid(),
+            UserId: user.Id.Value,
+            TenantId: user.TenantId.Value,
+            RefreshTokenHash: refreshTokenHash,
+            IssuedAtUtc: utcNow,
+            ExpiresAtUtc: refreshToken.ExpiresAtUtc);
+
+        await refreshTokenStore.StoreAsync(
+            refreshTokenSession,
+            cancellationToken);
 
         var response = new LoginResponse(
             user.Id.Value,
@@ -69,7 +91,9 @@ public sealed class LoginCommandHandler(
             user.Email.Value,
             accessToken.Value,
             accessToken.TokenType,
-            accessToken.ExpiresAtUtc);
+            accessToken.ExpiresAtUtc,
+            refreshToken.Value,
+            refreshToken.ExpiresAtUtc);
 
         return Result<LoginResponse>.Success(response);
     }

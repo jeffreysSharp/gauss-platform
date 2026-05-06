@@ -7,4 +7,6 @@ public sealed record LoginResponse(
     string Email,
     string AccessToken,
     string TokenType,
-    DateTimeOffset ExpiresAtUtc);
+    DateTimeOffset ExpiresAtUtc,
+    string RefreshToken,
+    DateTimeOffset RefreshTokenExpiresAtUtc);

@@ -56,6 +56,8 @@ public sealed class LoginEndpointTests(
         root.GetProperty("accessToken").GetString().Should().NotBeNullOrWhiteSpace();
         root.GetProperty("tokenType").GetString().Should().Be("Bearer");
         root.GetProperty("expiresAtUtc").GetDateTimeOffset().Should().BeAfter(DateTimeOffset.UtcNow);
+        root.GetProperty("refreshToken").GetString().Should().NotBeNullOrWhiteSpace();
+        root.GetProperty("refreshTokenExpiresAtUtc").GetDateTimeOffset().Should().BeAfter(DateTimeOffset.UtcNow);
 
         await AssertLastLoginWasUpdatedAsync(email);
     }
