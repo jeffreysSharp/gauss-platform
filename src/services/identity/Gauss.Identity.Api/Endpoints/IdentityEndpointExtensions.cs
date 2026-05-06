@@ -11,6 +11,7 @@ public static class IdentityEndpointExtensions
         app.MapRegisterUserEndpoint();
         app.MapLoginEndpoint();
         app.MapCurrentUserEndpoint();
+        app.MapRefreshTokenEndpoint();
 
         return app;
     }
