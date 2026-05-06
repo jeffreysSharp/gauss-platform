@@ -577,6 +577,13 @@ public sealed class LoginCommandHandlerTests
 
             return Task.CompletedTask;
         }
+
+        public Task<User?> GetByIdAsync(
+            UserId userId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(User);
+        }
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher
