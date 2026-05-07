@@ -77,6 +77,30 @@ public sealed class RedisRefreshTokenStore(
         await _database.KeyDeleteAsync(key);
     }
 
+    public async Task UpdateAsync(
+    RefreshTokenSession session,
+    CancellationToken cancellationToken = default)
+    {
+        await StoreAsync(
+            session,
+            cancellationToken);
+    }
+
+    public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+    Guid familyId,
+    CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IReadOnlyCollection<RefreshTokenSession>>([]);
+    }
+
+    public Task RevokeFamilyAsync(
+        Guid familyId,
+        DateTimeOffset revokedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     private TimeSpan CalculateTimeToLive(
         RefreshTokenSession session)
     {

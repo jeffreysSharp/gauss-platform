@@ -70,11 +70,18 @@ public sealed class RefreshTokenCommandHandlerTests
         refreshTokenStore.StoredSession.Should().NotBeNull();
         refreshTokenStore.StoredSession!.UserId.Should().Be(user.Id.Value);
         refreshTokenStore.StoredSession.TenantId.Should().Be(user.TenantId.Value);
+        refreshTokenStore.StoredSession.FamilyId.Should().Be(currentSession.FamilyId);
         refreshTokenStore.StoredSession.RefreshTokenHash.Should().Be("hashed-new-refresh-token-value");
         refreshTokenStore.StoredSession.IssuedAtUtc.Should().Be(dateTimeProvider.UtcNow);
         refreshTokenStore.StoredSession.ExpiresAtUtc.Should().Be(refreshTokenGenerator.RefreshToken.ExpiresAtUtc);
 
-        refreshTokenStore.DeletedHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(currentSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(currentSession.FamilyId);
+        refreshTokenStore.UpdatedSession.RefreshTokenHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.RotatedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.ReplacedBySessionId.Should().Be(refreshTokenStore.StoredSession.SessionId);
+        refreshTokenStore.UpdatedSession.IsRotated.Should().BeTrue();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session does not exist")]
@@ -102,7 +109,8 @@ public sealed class RefreshTokenCommandHandlerTests
 
         refreshTokenStore.LastHashChecked.Should().Be("hashed-missing-refresh-token-value");
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session is expired")]
@@ -141,7 +149,8 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session is revoked")]
@@ -177,7 +186,8 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session is rotated")]
@@ -215,7 +225,8 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when user does not exist")]
@@ -261,7 +272,8 @@ public sealed class RefreshTokenCommandHandlerTests
 
         userRepository.LastUserIdChecked.Should().Be(UserId.From(currentSession.UserId));
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return user unavailable when user cannot authenticate")]
@@ -297,13 +309,14 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.UserUnavailable);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should delete old refresh token when refresh succeeds")]
+    [Fact(DisplayName = "Should rotate current refresh token when refresh succeeds")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Delete_Old_RefreshToken_When_Refresh_Succeeds()
+    public async Task Should_Rotate_Current_RefreshToken_When_Refresh_Succeeds()
     {
         // Arrange
         var user = CreateActiveUser();
@@ -330,7 +343,16 @@ public sealed class RefreshTokenCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        refreshTokenStore.DeletedHash.Should().Be(currentSession.RefreshTokenHash);
+
+        refreshTokenStore.StoredSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(currentSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(currentSession.FamilyId);
+        refreshTokenStore.UpdatedSession.RefreshTokenHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.RotatedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.ReplacedBySessionId.Should().Be(refreshTokenStore.StoredSession!.SessionId);
+        refreshTokenStore.UpdatedSession.IsRotated.Should().BeTrue();
     }
 
     private static RefreshTokenCommandHandler CreateHandler(
@@ -491,13 +513,17 @@ public sealed class RefreshTokenCommandHandlerTests
 
     private sealed class FakeRefreshTokenStore : IRefreshTokenStore
     {
-        public RefreshTokenSession? Session { get; init; }
+        public RefreshTokenSession? Session { get; set; }
 
         public string? LastHashChecked { get; private set; }
 
         public RefreshTokenSession? StoredSession { get; private set; }
 
-        public string? DeletedHash { get; private set; }
+        public RefreshTokenSession? UpdatedSession { get; private set; }
+
+        public Guid? RevokedFamilyId { get; private set; }
+
+        public DateTimeOffset? RevokedAtUtc { get; private set; }
 
         public Task StoreAsync(
             RefreshTokenSession session,
@@ -517,11 +543,61 @@ public sealed class RefreshTokenCommandHandlerTests
             return Task.FromResult(Session);
         }
 
-        public Task DeleteAsync(
-            string refreshTokenHash,
+        public Task UpdateAsync(
+            RefreshTokenSession session,
             CancellationToken cancellationToken = default)
         {
-            DeletedHash = refreshTokenHash;
+            UpdatedSession = session;
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+            Guid familyId,
+            CancellationToken cancellationToken = default)
+        {
+            var sessions = new List<RefreshTokenSession>();
+
+            if (Session is not null && Session.FamilyId == familyId)
+            {
+                sessions.Add(Session);
+            }
+
+            if (StoredSession is not null && StoredSession.FamilyId == familyId)
+            {
+                sessions.Add(StoredSession);
+            }
+
+            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
+            {
+                sessions.Add(UpdatedSession);
+            }
+
+            return Task.FromResult<IReadOnlyCollection<RefreshTokenSession>>(sessions);
+        }
+
+        public Task RevokeFamilyAsync(
+            Guid familyId,
+            DateTimeOffset revokedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            RevokedFamilyId = familyId;
+            RevokedAtUtc = revokedAtUtc;
+
+            if (Session is not null && Session.FamilyId == familyId)
+            {
+                Session = Session.Revoke(revokedAtUtc);
+            }
+
+            if (StoredSession is not null && StoredSession.FamilyId == familyId)
+            {
+                StoredSession = StoredSession.Revoke(revokedAtUtc);
+            }
+
+            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
+            {
+                UpdatedSession = UpdatedSession.Revoke(revokedAtUtc);
+            }
 
             return Task.CompletedTask;
         }

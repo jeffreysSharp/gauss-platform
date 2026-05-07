@@ -80,8 +80,12 @@ public sealed class RefreshTokenCommandHandler(
             newSession,
             cancellationToken);
 
-        await refreshTokenStore.DeleteAsync(
-            currentSession.RefreshTokenHash,
+        var rotatedCurrentSession = currentSession.Rotate(
+            newSession.SessionId,
+            utcNow);
+
+        await refreshTokenStore.UpdateAsync(
+            rotatedCurrentSession,
             cancellationToken);
 
         var response = new RefreshTokenResponse(
