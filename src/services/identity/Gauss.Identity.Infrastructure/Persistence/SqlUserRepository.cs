@@ -1,7 +1,7 @@
 using Dapper;
 using Gauss.Identity.Application.Abstractions.Persistence;
+using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
-using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Infrastructure.Persistence;

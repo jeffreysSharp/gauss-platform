@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Gauss.Identity.Domain.Users.Tenancy;
+using Gauss.Identity.Domain.Tenants;
 
 namespace Gauss.Identity.UnitTests.Domain.Users;
 

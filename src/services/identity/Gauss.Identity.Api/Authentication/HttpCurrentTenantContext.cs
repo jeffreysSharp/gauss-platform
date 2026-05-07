@@ -1,6 +1,6 @@
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Tenancy;
-using Gauss.Identity.Domain.Users.Tenancy;
+using Gauss.Identity.Domain.Tenants;
 
 namespace Gauss.Identity.Api.Authentication;
 
