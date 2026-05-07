@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Gauss.Identity.Api.Authentication;
 using Gauss.Identity.Application.Abstractions.Authentication;
-using Gauss.Identity.Domain.Users.Tenancy;
+using Gauss.Identity.Domain.Tenants;
 
 namespace Gauss.Identity.ApiTests.Authentication;
 

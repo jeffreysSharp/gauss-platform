@@ -4,8 +4,8 @@ using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Authentication.Login;
 using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
-using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.UnitTests.Application.Authentication.Login;
