@@ -1,4 +1,5 @@
 using Gauss.Identity.Application.Abstractions.Authentication;
+using Gauss.Identity.Application.Abstractions.Tenancy;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gauss.Identity.Api.Endpoints.Authentication;
@@ -21,11 +22,13 @@ public static class CurrentUserEndpoint
     }
 
     private static IResult HandleAsync(
-        [FromServices] ICurrentUserContext currentUserContext)
+        [FromServices] ICurrentUserContext currentUserContext,
+        [FromServices] ICurrentTenantContext currentTenantContext)
     {
         if (!currentUserContext.IsAuthenticated ||
             currentUserContext.UserId is null ||
-            currentUserContext.TenantId is null ||
+            !currentTenantContext.HasTenant ||
+            currentTenantContext.CurrentTenantId is null ||
             string.IsNullOrWhiteSpace(currentUserContext.Name) ||
             string.IsNullOrWhiteSpace(currentUserContext.Email))
         {
@@ -34,7 +37,7 @@ public static class CurrentUserEndpoint
 
         var response = new CurrentUserResponse(
             currentUserContext.UserId.Value,
-            currentUserContext.TenantId.Value,
+            currentTenantContext.CurrentTenantId.Value.Value,
             currentUserContext.Name,
             currentUserContext.Email);
 
