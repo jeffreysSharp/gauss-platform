@@ -25,6 +25,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, SqlUserRepository>();
 
+        services.AddScoped<IPermissionRepository, SqlPermissionRepository>();
+
         services.AddSingleton<IPasswordHasher, AspNetCorePasswordHasher>();
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
