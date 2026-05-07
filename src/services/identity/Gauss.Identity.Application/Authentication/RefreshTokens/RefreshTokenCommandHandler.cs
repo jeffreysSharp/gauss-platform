@@ -69,6 +69,7 @@ public sealed class RefreshTokenCommandHandler(
 
         var newSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: currentSession.FamilyId,
             UserId: user.Id.Value,
             TenantId: user.TenantId.Value,
             RefreshTokenHash: newRefreshTokenHash,

@@ -127,6 +127,7 @@ public sealed class RedisRefreshTokenStoreTests(
     {
         return new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             RefreshTokenHash: $"refresh-token-hash-{Guid.NewGuid():N}",

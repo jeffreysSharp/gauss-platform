@@ -115,6 +115,7 @@ public sealed class RefreshTokenCommandHandlerTests
 
         var expiredSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             RefreshTokenHash: "hashed-current-refresh-token-value",
@@ -227,6 +228,7 @@ public sealed class RefreshTokenCommandHandlerTests
 
         var currentSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             RefreshTokenHash: "hashed-current-refresh-token-value",
@@ -354,6 +356,7 @@ public sealed class RefreshTokenCommandHandlerTests
     {
         return new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: user.Id.Value,
             TenantId: user.TenantId.Value,
             RefreshTokenHash: "hashed-current-refresh-token-value",
