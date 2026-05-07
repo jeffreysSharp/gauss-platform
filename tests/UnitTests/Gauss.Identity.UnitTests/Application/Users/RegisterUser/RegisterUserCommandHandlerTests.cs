@@ -3,6 +3,9 @@ using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Users.RegisterUser;
+using Gauss.Identity.Domain.Roles;
+using Gauss.Identity.Domain.Roles.ValueObjects;
+using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
@@ -19,9 +22,13 @@ public sealed class RegisterUserCommandHandlerTests
         var userRepository = new FakeUserRepository();
         var passwordHasher = new FakePasswordHasher();
         var dateTimeProvider = new FakeDateTimeProvider();
+        var permissionRepository = new FakePermissionRepository();
+        var roleRepository = new FakeRoleRepository();
 
         var handler = new RegisterUserCommandHandler(
             userRepository,
+            permissionRepository,
+            roleRepository,
             passwordHasher,
             dateTimeProvider);
 
@@ -46,8 +53,19 @@ public sealed class RegisterUserCommandHandlerTests
         userRepository.AddedUser.RegisteredAtUtc.Should().Be(dateTimeProvider.UtcNow);
         userRepository.LastEmailChecked.Should().Be(Email.Create("jeferson@gauss.com"));
         passwordHasher.LastPassword.Should().Be("StrongPassword@123");
+
+        roleRepository.AddedRole.Should().NotBeNull();
+        roleRepository.AddedRole!.TenantId.Should().Be(userRepository.AddedUser!.TenantId);
+        roleRepository.AddedRole.Name.Should().Be(RoleName.Create("Tenant Administrator"));
+        roleRepository.AddedRole.Permissions.Should().HaveCount(7);
+
+        roleRepository.AssignedUserRole.Should().NotBeNull();
+        roleRepository.AssignedUserRole!.UserId.Should().Be(userRepository.AddedUser.Id);
+        roleRepository.AssignedUserRole.TenantId.Should().Be(userRepository.AddedUser.TenantId);
+        roleRepository.AssignedUserRole.RoleId.Should().Be(roleRepository.AddedRole.Id);
+        roleRepository.AssignedUserRole.AssignedAtUtc.Should().Be(dateTimeProvider.UtcNow);
     }
-    
+
     [Theory(DisplayName = "Should return invalid email error when email is invalid")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
@@ -85,10 +103,17 @@ public sealed class RegisterUserCommandHandlerTests
             EmailAlreadyExists = true
         };
 
+        var passwordHasher = new FakePasswordHasher();
+        var dateTimeProvider = new FakeDateTimeProvider();
+        var permissionRepository = new FakePermissionRepository();
+        var roleRepository = new FakeRoleRepository();
+
         var handler = new RegisterUserCommandHandler(
             userRepository,
-            new FakePasswordHasher(),
-            new FakeDateTimeProvider());
+            permissionRepository,
+            roleRepository,
+            passwordHasher,
+            dateTimeProvider);
 
         var command = new RegisterUserCommand(
             "Jeferson Almeida",
@@ -101,15 +126,128 @@ public sealed class RegisterUserCommandHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RegisterUserErrors.EmailAlreadyExists);
+
         userRepository.AddedUser.Should().BeNull();
+
+        roleRepository.AddedRole.Should().BeNull();
+        roleRepository.AssignedUserRole.Should().BeNull();
+
+        passwordHasher.LastPassword.Should().BeNull();
     }
 
-    private static RegisterUserCommandHandler CreateHandler()
+    private static RegisterUserCommandHandler CreateHandler(
+        FakeUserRepository? userRepository = null,
+        FakePermissionRepository? permissionRepository = null,
+        FakeRoleRepository? roleRepository = null,
+        FakePasswordHasher? passwordHasher = null,
+        FakeDateTimeProvider? dateTimeProvider = null)
     {
         return new RegisterUserCommandHandler(
-            new FakeUserRepository(),
-            new FakePasswordHasher(),
-            new FakeDateTimeProvider());
+            userRepository ?? new FakeUserRepository(),
+            permissionRepository ?? new FakePermissionRepository(),
+            roleRepository ?? new FakeRoleRepository(),
+            passwordHasher ?? new FakePasswordHasher(),
+            dateTimeProvider ?? new FakeDateTimeProvider());
+    }
+
+    private sealed class FakePermissionRepository : IPermissionRepository
+    {
+        public Task<bool> ExistsByCodeAsync(
+            PermissionCode code,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public Task<Permission?> GetByCodeAsync(
+            PermissionCode code,
+            CancellationToken cancellationToken = default)
+        {
+            var permission = Permission.Create(
+                code,
+                $"Permission {code.Value}.",
+                new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
+
+            return Task.FromResult<Permission?>(permission);
+        }
+
+        public Task<IReadOnlyCollection<Permission>> GetAllEnabledAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyCollection<Permission>>([]);
+        }
+
+        public Task AddAsync(
+            Permission permission,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(
+            Permission permission,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeRoleRepository : IRoleRepository
+    {
+        public Role? AddedRole { get; private set; }
+
+        public UserRole? AssignedUserRole { get; private set; }
+
+        public Task<bool> ExistsByNameAsync(
+            TenantId tenantId,
+            RoleName name,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(false);
+        }
+
+        public Task<Role?> GetByIdAsync(
+            RoleId roleId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<Role?>(AddedRole);
+        }
+
+        public Task<IReadOnlyCollection<Role>> GetByUserAsync(
+            TenantId tenantId,
+            UserId userId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyCollection<Role>>(
+                AddedRole is null ? [] : [AddedRole]);
+        }
+
+        public Task AddAsync(
+            Role role,
+            CancellationToken cancellationToken = default)
+        {
+            AddedRole = role;
+
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(
+            Role role,
+            CancellationToken cancellationToken = default)
+        {
+            AddedRole = role;
+
+            return Task.CompletedTask;
+        }
+
+        public Task AssignToUserAsync(
+            UserRole userRole,
+            CancellationToken cancellationToken = default)
+        {
+            AssignedUserRole = userRole;
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeUserRepository : IUserRepository

@@ -3,18 +3,25 @@ using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
+using Gauss.Identity.Application.Authorization;
+using Gauss.Identity.Domain.Roles;
+using Gauss.Identity.Domain.Roles.ValueObjects;
+using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
-using Gauss.Identity.Domain.Users.Tenancy;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Application.Users.RegisterUser;
 
 public sealed class RegisterUserCommandHandler(
     IUserRepository userRepository,
+    IPermissionRepository permissionRepository,
+    IRoleRepository roleRepository,
     IPasswordHasher passwordHasher,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
 {
+    private const string InitialAdminRoleName = "Tenant Administrator";
+
     public async Task<Result<RegisterUserResponse>> HandleAsync(
         RegisterUserCommand command,
         CancellationToken cancellationToken = default)
@@ -41,6 +48,8 @@ public sealed class RegisterUserCommandHandler(
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.EmailAlreadyExists);
         }
 
+        var utcNow = dateTimeProvider.UtcNow;
+
         var tenantId = TenantId.New();
         var passwordHash = passwordHasher.Hash(command.Password);
 
@@ -49,9 +58,34 @@ public sealed class RegisterUserCommandHandler(
             command.Name,
             email,
             passwordHash,
-            dateTimeProvider.UtcNow);
+            utcNow);
 
-        await userRepository.AddAsync(user, cancellationToken);
+        await userRepository.AddAsync(
+            user,
+            cancellationToken);
+
+        var adminRole = Role.Create(
+            tenantId,
+            RoleName.Create(InitialAdminRoleName),
+            utcNow);
+
+        await GrantBaselinePermissionsAsync(
+            adminRole,
+            cancellationToken);
+
+        await roleRepository.AddAsync(
+            adminRole,
+            cancellationToken);
+
+        var userRole = UserRole.Assign(
+            user.Id,
+            tenantId,
+            adminRole.Id,
+            utcNow);
+
+        await roleRepository.AssignToUserAsync(
+            userRole,
+            cancellationToken);
 
         var response = new RegisterUserResponse(
             user.Id.Value,
@@ -60,5 +94,36 @@ public sealed class RegisterUserCommandHandler(
             user.Email.Value);
 
         return Result<RegisterUserResponse>.Success(response);
+    }
+
+    private async Task GrantBaselinePermissionsAsync(
+        Role role,
+        CancellationToken cancellationToken)
+    {
+        foreach (var permissionCode in GetBaselinePermissionCodes())
+        {
+            var permission = await permissionRepository.GetByCodeAsync(
+                PermissionCode.Create(permissionCode),
+                cancellationToken);
+
+            if (permission is not null)
+            {
+                role.GrantPermission(permission);
+            }
+        }
+    }
+
+    private static IReadOnlyCollection<string> GetBaselinePermissionCodes()
+    {
+        return
+        [
+            IdentityPermissions.UsersRead,
+            IdentityPermissions.UsersManage,
+            IdentityPermissions.RolesRead,
+            IdentityPermissions.RolesManage,
+            IdentityPermissions.PermissionsRead,
+            IdentityPermissions.TenantRead,
+            IdentityPermissions.TenantManage
+        ];
     }
 }
