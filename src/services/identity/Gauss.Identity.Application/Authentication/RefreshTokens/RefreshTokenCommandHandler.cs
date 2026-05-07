@@ -36,6 +36,23 @@ public sealed class RefreshTokenCommandHandler(
                 RefreshTokenErrors.InvalidToken);
         }
 
+        if (currentSession.IsReusableAttackCandidate(utcNow))
+        {
+            var compromisedSession = currentSession.MarkReuseDetected(utcNow);
+
+            await refreshTokenStore.UpdateAsync(
+                compromisedSession,
+                cancellationToken);
+
+            await refreshTokenStore.RevokeFamilyAsync(
+                compromisedSession.FamilyId,
+                utcNow,
+                cancellationToken);
+
+            return Result<RefreshTokenResponse>.Failure(
+                RefreshTokenErrors.InvalidToken);
+        }
+
         if (!currentSession.IsActive(utcNow))
         {
             return Result<RefreshTokenResponse>.Failure(

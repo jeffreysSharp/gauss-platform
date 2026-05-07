@@ -53,7 +53,7 @@ public sealed record RefreshTokenSession(
     {
         return this with
         {
-            RevokedAtUtc = revokedAtUtc
+            RevokedAtUtc = RevokedAtUtc ?? revokedAtUtc
         };
     }
 
