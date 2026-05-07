@@ -1,5 +1,6 @@
 using Gauss.Identity.Api.Authentication;
 using Gauss.Identity.Application.Abstractions.Authentication;
+using Gauss.Identity.Application.Abstractions.Tenancy;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 
@@ -20,6 +21,8 @@ public sealed class AuthenticationInstaller : IInstaller
         services.AddHttpContextAccessor();
 
         services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
+
+        services.AddScoped<ICurrentTenantContext, HttpCurrentTenantContext>();
 
         services.AddSingleton<
             IConfigureOptions<JwtBearerOptions>,
