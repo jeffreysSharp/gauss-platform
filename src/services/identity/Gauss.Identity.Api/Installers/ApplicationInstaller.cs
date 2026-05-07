@@ -5,6 +5,7 @@ using Gauss.Identity.Application.Abstractions.Authorization;
 using Gauss.Identity.Application.Authentication.Login;
 using Gauss.Identity.Application.Authentication.RefreshTokens;
 using Gauss.Identity.Application.Authorization;
+using Gauss.Identity.Application.Authorization.GetPermissions;
 using Gauss.Identity.Application.Users.RegisterUser;
 
 namespace Gauss.Identity.Api.Installers;
@@ -59,5 +60,10 @@ public sealed class ApplicationInstaller : IInstaller
         });
 
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
+
+        services.AddScoped<GetPermissionsQueryHandler>();
+
+        services.AddScoped<IQueryHandler<GetPermissionsQuery, IReadOnlyCollection<GetPermissionResponse>>>(
+            serviceProvider => serviceProvider.GetRequiredService<GetPermissionsQueryHandler>());
     }
 }
