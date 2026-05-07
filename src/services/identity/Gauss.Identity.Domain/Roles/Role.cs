@@ -21,6 +21,19 @@ public sealed class Role : AggregateRoot<RoleId>
         CreatedAtUtc = createdAtUtc;
     }
 
+    private Role(
+        RoleSnapshot snapshot,
+        IEnumerable<RolePermission> permissions)
+        : base(snapshot.Id)
+    {
+        TenantId = snapshot.TenantId;
+        Name = snapshot.Name;
+        Status = snapshot.Status;
+        CreatedAtUtc = snapshot.CreatedAtUtc;
+
+        _permissions.AddRange(permissions);
+    }
+
     public TenantId TenantId { get; private init; }
 
     public RoleName Name { get; private set; }
@@ -46,6 +59,19 @@ public sealed class Role : AggregateRoot<RoleId>
             tenantId,
             name,
             createdAtUtc);
+    }
+
+    public static Role Rehydrate(
+        RoleSnapshot snapshot,
+        IEnumerable<RolePermission> permissions)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(snapshot.Name);
+        ArgumentNullException.ThrowIfNull(permissions);
+
+        return new Role(
+            snapshot,
+            permissions);
     }
 
     public void Rename(RoleName name)

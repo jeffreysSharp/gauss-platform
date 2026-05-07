@@ -18,6 +18,15 @@ public sealed class Permission : AggregateRoot<PermissionId>
         IsEnabled = true;
     }
 
+    private Permission(PermissionSnapshot snapshot)
+        : base(snapshot.Id)
+    {
+        Code = snapshot.Code;
+        Description = snapshot.Description;
+        IsEnabled = snapshot.IsEnabled;
+        CreatedAtUtc = snapshot.CreatedAtUtc;
+    }
+
     public PermissionCode Code { get; private init; }
 
     public string Description { get; private set; }
@@ -39,6 +48,15 @@ public sealed class Permission : AggregateRoot<PermissionId>
             code,
             description.Trim(),
             createdAtUtc);
+    }
+
+    public static Permission Rehydrate(PermissionSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(snapshot.Code);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshot.Description);
+
+        return new Permission(snapshot);
     }
 
     public void UpdateDescription(string description)
