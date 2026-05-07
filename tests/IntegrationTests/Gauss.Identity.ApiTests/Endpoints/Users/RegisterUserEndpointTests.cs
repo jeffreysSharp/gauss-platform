@@ -6,6 +6,7 @@ using Dapper;
 using Gauss.Identity.ApiTests.Fixtures;
 using Gauss.Testing.Api;
 using Microsoft.Data.SqlClient;
+using Gauss.Identity.Application.Authorization;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Users;
 
@@ -51,6 +52,10 @@ public sealed class RegisterUserEndpointTests(
         root.GetProperty("email").GetString().Should().Be(request.Email);
 
         await AssertUserWasPersistedAsync(request.Email);
+
+        await AssertTenantAdminRoleWasCreatedAndAssignedAsync(
+            root.GetProperty("userId").GetGuid(),
+            root.GetProperty("tenantId").GetGuid());
     }
 
     [Fact(DisplayName = "Should return conflict when email already exists")]
@@ -196,4 +201,88 @@ public sealed class RegisterUserEndpointTests(
 
         count.Should().Be(1);
     }
+
+    private async Task AssertTenantAdminRoleWasCreatedAndAssignedAsync(
+        Guid userId,
+        Guid tenantId)
+    {
+        await using var connection = new SqlConnection(databaseFixture.ConnectionString);
+
+        const string roleSql = """
+        SELECT TOP 1
+            [Id],
+            [Name],
+            [Status]
+        FROM [identity].[Roles]
+        WHERE [TenantId] = @TenantId
+          AND [Name] = @Name
+          AND [IsDeleted] = 0;
+        """;
+
+        var role = await connection.QuerySingleOrDefaultAsync<TenantAdminRoleRecord>(
+            roleSql,
+            new
+            {
+                TenantId = tenantId,
+                Name = "Tenant Administrator"
+            });
+
+        role.Should().NotBeNull();
+        role!.Id.Should().NotBe(Guid.Empty);
+        role.Name.Should().Be("Tenant Administrator");
+        role.Status.Should().Be(1);
+
+        const string userRoleSql = """
+        SELECT COUNT(1)
+        FROM [identity].[UserRoles]
+        WHERE [UserId] = @UserId
+          AND [TenantId] = @TenantId
+          AND [RoleId] = @RoleId
+          AND [IsDeleted] = 0;
+        """;
+
+        var userRoleCount = await connection.ExecuteScalarAsync<int>(
+            userRoleSql,
+            new
+            {
+                UserId = userId,
+                TenantId = tenantId,
+                RoleId = role.Id
+            });
+
+        userRoleCount.Should().Be(1);
+
+        const string rolePermissionsSql = """
+        SELECT
+            [PermissionCode]
+        FROM [identity].[RolePermissions]
+        WHERE [RoleId] = @RoleId
+          AND [IsDeleted] = 0
+        ORDER BY [PermissionCode];
+        """;
+
+        var permissionCodes = (await connection.QueryAsync<string>(
+                rolePermissionsSql,
+                new
+                {
+                    RoleId = role.Id
+                }))
+            .ToList();
+
+        permissionCodes.Should().BeEquivalentTo(
+        [
+            IdentityPermissions.UsersRead,
+            IdentityPermissions.UsersManage,
+            IdentityPermissions.RolesRead,
+            IdentityPermissions.RolesManage,
+            IdentityPermissions.PermissionsRead,
+            IdentityPermissions.TenantRead,
+            IdentityPermissions.TenantManage
+        ]);
+    }
+
+    private sealed record TenantAdminRoleRecord(
+        Guid Id,
+        string Name,
+        int Status);
 }
