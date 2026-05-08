@@ -1,5 +1,6 @@
 using FluentValidation;
 using Gauss.BuildingBlocks.Application.Abstractions.Messaging;
+using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.BuildingBlocks.Application.Behaviors.Validation;
 using Gauss.Identity.Application.Abstractions.Authorization;
 using Gauss.Identity.Application.Authentication.Login;
@@ -16,48 +17,24 @@ public sealed class ApplicationInstaller : IInstaller
         IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddScoped<RegisterUserCommandHandler>();
-        services.AddScoped<LoginCommandHandler>();
+        services.AddCommandHandlerWithValidation<
+            RegisterUserCommand,
+            RegisterUserResponse,
+            RegisterUserCommandHandler>();
+
+        services.AddCommandHandlerWithValidation<
+            LoginCommand,
+            LoginResponse,
+            LoginCommandHandler>();
+
+        services.AddCommandHandlerWithValidation<
+            RefreshTokenCommand,
+            RefreshTokenResponse,
+            RefreshTokenCommandHandler>();
 
         services.AddScoped<IValidator<RegisterUserCommand>, RegisterUserCommandValidator>();
         services.AddScoped<IValidator<LoginCommand>, LoginCommandValidator>();
-
-        services.AddScoped<ICommandHandler<RegisterUserCommand, RegisterUserResponse>>(serviceProvider =>
-        {
-            var innerHandler = serviceProvider.GetRequiredService<RegisterUserCommandHandler>();
-
-            var validators = serviceProvider.GetServices<IValidator<RegisterUserCommand>>();
-
-            return new ValidationCommandHandlerDecorator<RegisterUserCommand, RegisterUserResponse>(
-                innerHandler,
-                validators);
-        });
-
-        services.AddScoped<ICommandHandler<LoginCommand, LoginResponse>>(serviceProvider =>
-        {
-            var innerHandler = serviceProvider.GetRequiredService<LoginCommandHandler>();
-
-            var validators = serviceProvider.GetServices<IValidator<LoginCommand>>();
-
-            return new ValidationCommandHandlerDecorator<LoginCommand, LoginResponse>(
-                innerHandler,
-                validators);
-        });
-
-        services.AddScoped<RefreshTokenCommandHandler>();
-
         services.AddScoped<IValidator<RefreshTokenCommand>, RefreshTokenCommandValidator>();
-
-        services.AddScoped<ICommandHandler<RefreshTokenCommand, RefreshTokenResponse>>(serviceProvider =>
-        {
-            var innerHandler = serviceProvider.GetRequiredService<RefreshTokenCommandHandler>();
-
-            var validators = serviceProvider.GetServices<IValidator<RefreshTokenCommand>>();
-
-            return new ValidationCommandHandlerDecorator<RefreshTokenCommand, RefreshTokenResponse>(
-                innerHandler,
-                validators);
-        });
 
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 
@@ -65,5 +42,29 @@ public sealed class ApplicationInstaller : IInstaller
 
         services.AddScoped<IQueryHandler<GetPermissionsQuery, IReadOnlyCollection<GetPermissionResponse>>>(
             serviceProvider => serviceProvider.GetRequiredService<GetPermissionsQueryHandler>());
+    }
+}
+
+internal static class ApplicationInstallerExtensions
+{
+    public static IServiceCollection AddCommandHandlerWithValidation<TCommand, TResponse, THandler>(
+        this IServiceCollection services)
+        where TCommand : ICommand<TResponse>
+        where THandler : class, ICommandHandler<TCommand, TResponse>
+    {
+        services.AddScoped<THandler>();
+
+        services.AddScoped<ICommandHandler<TCommand, TResponse>>(serviceProvider =>
+        {
+            var innerHandler = serviceProvider.GetRequiredService<THandler>();
+
+            var validators = serviceProvider.GetServices<IValidator<TCommand>>();
+
+            return new ValidationCommandHandlerDecorator<TCommand, TResponse>(
+                innerHandler,
+                validators);
+        });
+
+        return services;
     }
 }
