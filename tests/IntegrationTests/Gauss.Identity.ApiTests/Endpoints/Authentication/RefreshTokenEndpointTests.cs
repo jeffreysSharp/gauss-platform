@@ -5,6 +5,7 @@ using Dapper;
 using Gauss.Identity.ApiTests.Fixtures;
 using Gauss.Identity.Domain.Users;
 using Gauss.Testing.Api;
+using Gauss.Testing.Fixtures;
 using Microsoft.Data.SqlClient;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Authentication;

@@ -1,0 +1,43 @@
+name: gauss-platform
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gauss-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Asd123!!!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - gauss-sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: >
+        /bin/bash -c "
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Asd123!!!' -C -Q 'SELECT 1'
+        || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Asd123!!!' -Q 'SELECT 1'
+        "
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: gauss-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - gauss-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  gauss-sqlserver-data:
+  gauss-redis-data:

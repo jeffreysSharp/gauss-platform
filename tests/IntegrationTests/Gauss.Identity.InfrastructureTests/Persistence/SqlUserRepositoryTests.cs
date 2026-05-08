@@ -5,6 +5,7 @@ using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 using Gauss.Identity.Infrastructure.Persistence;
 using Gauss.Identity.InfrastructureTests.Fixtures;
+using Gauss.Testing.Fixtures;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
