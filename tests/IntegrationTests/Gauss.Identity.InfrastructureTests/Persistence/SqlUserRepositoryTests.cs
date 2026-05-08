@@ -4,7 +4,6 @@ using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 using Gauss.Identity.Infrastructure.Persistence;
-using Gauss.Identity.InfrastructureTests.Fixtures;
 using Gauss.Testing.Fixtures;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
@@ -25,6 +24,8 @@ public sealed class SqlUserRepositoryTests(
 
         var user = CreateUser();
 
+        await AddTenantAsync(user.TenantId);
+
         // Act
         await repository.AddAsync(user);
 
@@ -44,20 +45,37 @@ public sealed class SqlUserRepositoryTests(
             WHERE [Id] = @UserId;
             """;
 
-        var persistedUser = await connection.QuerySingleAsync<dynamic>(
+        var persistedUser = await connection.QuerySingleAsync<UserRecord>(
             sql,
             new
             {
                 UserId = user.Id.Value
             });
 
-        ((Guid)persistedUser.Id).Should().Be(user.Id.Value);
-        ((Guid)persistedUser.TenantId).Should().Be(user.TenantId.Value);
-        ((string)persistedUser.Name).Should().Be(user.Name);
-        ((string)persistedUser.Email).Should().Be(user.Email.Value);
-        ((string)persistedUser.NormalizedEmail).Should().Be(user.Email.Value);
-        ((string)persistedUser.PasswordHash).Should().Be(user.PasswordHash.Value);
-        ((int)persistedUser.Status).Should().Be((int)user.Status);
+        persistedUser.Id.Should().Be(user.Id.Value);
+        persistedUser.TenantId.Should().Be(user.TenantId.Value);
+        persistedUser.Name.Should().Be(user.Name);
+        persistedUser.Email.Should().Be(user.Email.Value);
+        persistedUser.NormalizedEmail.Should().Be(user.Email.Value);
+        persistedUser.PasswordHash.Should().Be(user.PasswordHash.Value);
+        persistedUser.Status.Should().Be((int)user.Status);
+    }
+
+    [Fact(DisplayName = "Should not create tenant implicitly when adding user")]
+    [Trait("Layer", "Infrastructure")]
+    [Trait("Category", "Persistence")]
+    public async Task Should_Not_Create_Tenant_Implicitly_When_Adding_User()
+    {
+        // Arrange
+        var repository = CreateRepository();
+
+        var user = CreateUser();
+
+        // Act
+        var act = async () => await repository.AddAsync(user);
+
+        // Assert
+        await act.Should().ThrowAsync<SqlException>();
     }
 
     [Fact(DisplayName = "Should return true when email exists globally")]
@@ -70,6 +88,7 @@ public sealed class SqlUserRepositoryTests(
 
         var user = CreateUser();
 
+        await AddTenantAsync(user.TenantId);
         await repository.AddAsync(user);
 
         // Act
@@ -108,6 +127,7 @@ public sealed class SqlUserRepositoryTests(
 
         user.ConfirmEmail(new DateTimeOffset(2026, 04, 30, 12, 5, 0, TimeSpan.Zero));
 
+        await AddTenantAsync(user.TenantId);
         await repository.AddAsync(user);
 
         // Act
@@ -155,6 +175,7 @@ public sealed class SqlUserRepositoryTests(
 
         var user = CreateUser();
 
+        await AddTenantAsync(user.TenantId);
         await repository.AddAsync(user);
 
         var loggedInAtUtc = new DateTimeOffset(
@@ -206,6 +227,8 @@ public sealed class SqlUserRepositoryTests(
             PasswordHash.Create("hashed-password-value"),
             new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
 
+        await AddTenantAsync(user.TenantId);
+
         // Act
         await repository.AddAsync(user);
 
@@ -229,16 +252,60 @@ public sealed class SqlUserRepositoryTests(
         passwordHash.Should().Be("hashed-password-value");
     }
 
+    private async Task AddTenantAsync(TenantId tenantId)
+    {
+        await using var connection = new SqlConnection(fixture.ConnectionString);
+
+        const string sql = """
+            INSERT INTO [platform].[Tenants]
+            (
+                [Id],
+                [Name],
+                [Slug],
+                [Status],
+                [CreatedAtUtc],
+                [UpdatedAtUtc],
+                [IsDeleted]
+            )
+            VALUES
+            (
+                @Id,
+                @Name,
+                @Slug,
+                @Status,
+                @CreatedAtUtc,
+                NULL,
+                0
+            );
+            """;
+
+        await connection.ExecuteAsync(
+            sql,
+            new
+            {
+                Id = tenantId.Value,
+                Name = $"Tenant {tenantId.Value:N}",
+                Slug = tenantId.Value.ToString("N"),
+                Status = 1,
+                CreatedAtUtc = new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero)
+            });
+    }
+
     private SqlUserRepository CreateRepository()
+    {
+        var connectionFactory = CreateConnectionFactory();
+
+        return new SqlUserRepository(connectionFactory);
+    }
+
+    private IdentityDbConnectionFactory CreateConnectionFactory()
     {
         var options = Options.Create(new IdentityPersistenceOptions
         {
             ConnectionString = fixture.ConnectionString
         });
 
-        var connectionFactory = new IdentityDbConnectionFactory(options);
-
-        return new SqlUserRepository(connectionFactory);
+        return new IdentityDbConnectionFactory(options);
     }
 
     private static User CreateUser()
@@ -250,4 +317,13 @@ public sealed class SqlUserRepositoryTests(
             PasswordHash.Create("hashed-password-value"),
             new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
     }
+
+    private sealed record UserRecord(
+        Guid Id,
+        Guid TenantId,
+        string Name,
+        string Email,
+        string NormalizedEmail,
+        string PasswordHash,
+        int Status);
 }

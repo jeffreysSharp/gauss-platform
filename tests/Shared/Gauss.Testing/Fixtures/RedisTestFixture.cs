@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 
-namespace Gauss.Identity.InfrastructureTests.Fixtures;
+namespace Gauss.Testing.Fixtures;
 
 public sealed class RedisTestFixture : IAsyncLifetime
 {
@@ -19,7 +19,7 @@ public sealed class RedisTestFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _connectionMultiplexer = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(
+        _connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(
             ConnectionString);
 
         await FlushDatabaseAsync();

@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using Gauss.Identity.Domain.Roles;
 using Gauss.Identity.Domain.Roles.ValueObjects;
 using Gauss.Identity.Infrastructure.Persistence;
-using Gauss.Identity.InfrastructureTests.Fixtures;
 using Gauss.Testing.Fixtures;
 
 namespace Gauss.Identity.InfrastructureTests.Persistence;

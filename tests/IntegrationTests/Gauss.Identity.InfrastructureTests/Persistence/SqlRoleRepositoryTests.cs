@@ -6,8 +6,9 @@ using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 using Gauss.Identity.Infrastructure.Persistence;
-using Gauss.Identity.InfrastructureTests.Fixtures;
 using Gauss.Testing.Fixtures;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace Gauss.Identity.InfrastructureTests.Persistence;
 
@@ -229,6 +230,7 @@ public sealed class SqlRoleRepositoryTests(
 
         var user = CreateActiveUser();
 
+        await AddTenantAsync(user.TenantId);
         await userRepository.AddAsync(user);
 
         var role = CreateRole(
@@ -272,6 +274,7 @@ public sealed class SqlRoleRepositoryTests(
 
         var user = CreateActiveUser();
 
+        await AddTenantAsync(user.TenantId);
         await userRepository.AddAsync(user);
 
         var permission = CreatePermission("Identity.Users.Read");
@@ -311,7 +314,7 @@ public sealed class SqlRoleRepositoryTests(
 
     private async Task AddTenantAsync(TenantId tenantId)
     {
-        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(
+        await using var connection = new SqlConnection(
             databaseFixture.ConnectionString);
 
         const string sql = """
@@ -351,41 +354,34 @@ public sealed class SqlRoleRepositoryTests(
 
     private SqlRoleRepository CreateRoleRepository()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(
-            new IdentityPersistenceOptions
-            {
-                ConnectionString = databaseFixture.ConnectionString
-            });
-
-        var connectionFactory = new IdentityDbConnectionFactory(options);
+        var connectionFactory = CreateConnectionFactory();
 
         return new SqlRoleRepository(connectionFactory);
     }
 
     private SqlPermissionRepository CreatePermissionRepository()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(
-            new IdentityPersistenceOptions
-            {
-                ConnectionString = databaseFixture.ConnectionString
-            });
-
-        var connectionFactory = new IdentityDbConnectionFactory(options);
+        var connectionFactory = CreateConnectionFactory();
 
         return new SqlPermissionRepository(connectionFactory);
     }
 
     private SqlUserRepository CreateUserRepository()
     {
-        var options = Microsoft.Extensions.Options.Options.Create(
+        var connectionFactory = CreateConnectionFactory();
+
+        return new SqlUserRepository(connectionFactory);
+    }
+
+    private IdentityDbConnectionFactory CreateConnectionFactory()
+    {
+        var options = Options.Create(
             new IdentityPersistenceOptions
             {
                 ConnectionString = databaseFixture.ConnectionString
             });
 
-        var connectionFactory = new IdentityDbConnectionFactory(options);
-
-        return new SqlUserRepository(connectionFactory);
+        return new IdentityDbConnectionFactory(options);
     }
 
     private static Role CreateRole(
