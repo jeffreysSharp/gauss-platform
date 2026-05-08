@@ -2,7 +2,7 @@ using FluentMigrator.Runner;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Gauss.Identity.InfrastructureTests.Fixtures;
+namespace Gauss.Testing.Fixtures;
 
 public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
 {
@@ -10,7 +10,7 @@ public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
     private const string DefaultSqlServerUser = "sa";
     private const string DefaultSqlServerPassword = "Asd123!!!";
 
-    private readonly string _databaseName = $"Gauss_IdentityTests_{Guid.NewGuid():N}";
+    private readonly string _databaseName = $"Gauss_Tests_{Guid.NewGuid():N}";
 
     public string ConnectionString => CreateConnectionString(_databaseName);
 
@@ -59,7 +59,7 @@ public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
 
     private void RunMigrations()
     {
-        using var services = new ServiceCollection()
+        using var serviceProvider = new ServiceCollection()
             .AddFluentMigratorCore()
             .ConfigureRunner(runner =>
             {
@@ -72,7 +72,7 @@ public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
             .AddLogging(logging => logging.AddFluentMigratorConsole())
             .BuildServiceProvider(validateScopes: false);
 
-        using var scope = services.CreateScope();
+        using var scope = serviceProvider.CreateScope();
 
         var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
 

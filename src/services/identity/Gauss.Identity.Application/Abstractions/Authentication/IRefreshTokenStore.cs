@@ -12,7 +12,16 @@ public interface IRefreshTokenStore
         string refreshTokenHash,
         CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(
-        string refreshTokenHash,
+    Task UpdateAsync(
+        RefreshTokenSession session,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+        Guid familyId,
+        CancellationToken cancellationToken = default);
+
+    Task RevokeFamilyAsync(
+        Guid familyId,
+        DateTimeOffset revokedAtUtc,
         CancellationToken cancellationToken = default);
 }

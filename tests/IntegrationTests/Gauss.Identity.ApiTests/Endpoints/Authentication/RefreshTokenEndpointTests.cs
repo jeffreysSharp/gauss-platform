@@ -5,6 +5,7 @@ using Dapper;
 using Gauss.Identity.ApiTests.Fixtures;
 using Gauss.Identity.Domain.Users;
 using Gauss.Testing.Api;
+using Gauss.Testing.Fixtures;
 using Microsoft.Data.SqlClient;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Authentication;
@@ -153,6 +154,77 @@ public sealed class RefreshTokenEndpointTests(
 
         // Assert
         await secondRefreshResponse.ShouldBeProblemDetailsAsync(
+            HttpStatusCode.Unauthorized,
+            "Unauthorized",
+            "Identity.RefreshToken.InvalidToken");
+    }
+
+    [Fact(DisplayName = "Should revoke refresh token family when old refresh token is reused")]
+    [Trait("Layer", "Api")]
+    [Trait("Category", "Endpoints")]
+    public async Task Should_Revoke_RefreshToken_Family_When_Old_RefreshToken_Is_Reused()
+    {
+        // Arrange
+        await using var factory = new IdentityApiFactory(databaseFixture);
+        using var client = factory.CreateClient();
+
+        var email = $"jeferson-{Guid.NewGuid():N}@gauss.com";
+        const string password = "StrongPassword@123";
+
+        await RegisterUserAsync(client, email, password);
+        await ActivateUserAsync(email);
+
+        var loginResponse = await LoginAsync(
+            client,
+            email,
+            password);
+
+        var firstRefreshRequest = new
+        {
+            RefreshToken = loginResponse.RefreshToken
+        };
+
+        using var firstRefreshResponse = await client.PostAsJsonAsync(
+            "/api/v1/identity/refresh-token",
+            firstRefreshRequest);
+
+        await firstRefreshResponse.ShouldHaveStatusCodeAsync(HttpStatusCode.OK);
+
+        var firstRefreshRoot = await firstRefreshResponse.ReadJsonRootElementAsync();
+
+        var rotatedRefreshToken = firstRefreshRoot
+            .GetProperty("refreshToken")
+            .GetString();
+
+        rotatedRefreshToken.Should().NotBeNullOrWhiteSpace();
+        rotatedRefreshToken.Should().NotBe(loginResponse.RefreshToken);
+
+        var reusedOldRefreshTokenRequest = new
+        {
+            RefreshToken = loginResponse.RefreshToken
+        };
+
+        // Act
+        using var reuseResponse = await client.PostAsJsonAsync(
+            "/api/v1/identity/refresh-token",
+            reusedOldRefreshTokenRequest);
+
+        // Assert
+        await reuseResponse.ShouldBeProblemDetailsAsync(
+            HttpStatusCode.Unauthorized,
+            "Unauthorized",
+            "Identity.RefreshToken.InvalidToken");
+
+        var rotatedRefreshTokenRequest = new
+        {
+            RefreshToken = rotatedRefreshToken
+        };
+
+        using var rotatedTokenResponseAfterFamilyRevocation = await client.PostAsJsonAsync(
+            "/api/v1/identity/refresh-token",
+            rotatedRefreshTokenRequest);
+
+        await rotatedTokenResponseAfterFamilyRevocation.ShouldBeProblemDetailsAsync(
             HttpStatusCode.Unauthorized,
             "Unauthorized",
             "Identity.RefreshToken.InvalidToken");

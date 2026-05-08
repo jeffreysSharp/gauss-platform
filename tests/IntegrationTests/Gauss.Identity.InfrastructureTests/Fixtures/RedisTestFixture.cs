@@ -5,7 +5,7 @@ namespace Gauss.Identity.InfrastructureTests.Fixtures;
 public sealed class RedisTestFixture : IAsyncLifetime
 {
     private const string DefaultConnectionString =
-        "localhost:6379,abortConnect=false,allowAdmin=true";
+        "localhost:6379,abortConnect=false";
 
     private ConnectionMultiplexer? _connectionMultiplexer;
 

@@ -668,6 +668,12 @@ public sealed class LoginCommandHandlerTests
     {
         public RefreshTokenSession? StoredSession { get; private set; }
 
+        public RefreshTokenSession? UpdatedSession { get; private set; }
+
+        public Guid? RevokedFamilyId { get; private set; }
+
+        public DateTimeOffset? RevokedAtUtc { get; private set; }
+
         public Task StoreAsync(
             RefreshTokenSession session,
             CancellationToken cancellationToken = default)
@@ -684,11 +690,45 @@ public sealed class LoginCommandHandlerTests
             return Task.FromResult<RefreshTokenSession?>(StoredSession);
         }
 
-        public Task DeleteAsync(
-            string refreshTokenHash,
+        public Task UpdateAsync(
+            RefreshTokenSession session,
             CancellationToken cancellationToken = default)
         {
-            StoredSession = null;
+            UpdatedSession = session;
+            StoredSession = session;
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+            Guid familyId,
+            CancellationToken cancellationToken = default)
+        {
+            IReadOnlyCollection<RefreshTokenSession> sessions =
+                StoredSession is not null && StoredSession.FamilyId == familyId
+                    ? [StoredSession]
+                    : [];
+
+            return Task.FromResult(sessions);
+        }
+
+        public Task RevokeFamilyAsync(
+            Guid familyId,
+            DateTimeOffset revokedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            RevokedFamilyId = familyId;
+            RevokedAtUtc = revokedAtUtc;
+
+            if (StoredSession is not null && StoredSession.FamilyId == familyId)
+            {
+                StoredSession = StoredSession.Revoke(revokedAtUtc);
+            }
+
+            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
+            {
+                UpdatedSession = UpdatedSession.Revoke(revokedAtUtc);
+            }
 
             return Task.CompletedTask;
         }

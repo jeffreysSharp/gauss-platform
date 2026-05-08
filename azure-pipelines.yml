@@ -27,22 +27,13 @@ variables:
   buildConfiguration: 'Release'
   dotnetSdkVersion: '10.0.x'
   solutionPath: 'Gauss.slnx'
+
+  buildingBlocksUnitTestProject: 'tests/UnitTests/Gauss.BuildingBlocks.UnitTests/Gauss.BuildingBlocks.UnitTests.csproj'
+  identityUnitTestProject: 'tests/UnitTests/Gauss.Identity.UnitTests/Gauss.Identity.UnitTests.csproj'
+  identityInfrastructureTestProject: 'tests/IntegrationTests/Gauss.Identity.InfrastructureTests/Gauss.Identity.InfrastructureTests.csproj'
+  identityApiTestProject: 'tests/IntegrationTests/Gauss.Identity.ApiTests/Gauss.Identity.ApiTests.csproj'
+
   sqlServerPassword: 'Asd123!!!'
-
-resources:
-  containers:
-    - container: sqlserver
-      image: mcr.microsoft.com/mssql/server:2022-latest
-      env:
-        ACCEPT_EULA: 'Y'
-        MSSQL_SA_PASSWORD: $(sqlServerPassword)
-      ports:
-        - 1433:1433
-
-    - container: redis
-      image: redis:7-alpine
-      ports:
-        - 6379:6379
 
 stages:
   - stage: Build
@@ -89,28 +80,35 @@ stages:
           - script: dotnet restore "$(solutionPath)"
             displayName: 'Restore solution'
 
-          - script: >
-              dotnet test "$(solutionPath)"
-              --configuration "$(buildConfiguration)"
-              --logger "trx;LogFilePrefix=unit-tests"
-              --results-directory "$(Agent.TempDirectory)/TestResults"
-              --collect:"XPlat Code Coverage"
-              --filter "Layer!=Infrastructure&Layer!=Api"
-            displayName: 'Run unit tests'
+          - script: |
+              dotnet test "$(buildingBlocksUnitTestProject)" \
+                --configuration "$(buildConfiguration)" \
+                --logger "trx;LogFilePrefix=building-blocks-unit-tests" \
+                --results-directory "$(Agent.TempDirectory)/TestResults/UnitTests/BuildingBlocks" \
+                --collect:"XPlat Code Coverage"
+            displayName: 'Run BuildingBlocks unit tests'
+
+          - script: |
+              dotnet test "$(identityUnitTestProject)" \
+                --configuration "$(buildConfiguration)" \
+                --logger "trx;LogFilePrefix=identity-unit-tests" \
+                --results-directory "$(Agent.TempDirectory)/TestResults/UnitTests/Identity" \
+                --collect:"XPlat Code Coverage"
+            displayName: 'Run Identity unit tests'
 
           - task: PublishTestResults@2
             displayName: 'Publish unit test results'
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'VSTest'
-              testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/UnitTests/**/*.trx'
               failTaskOnFailedTests: true
 
           - task: PublishCodeCoverageResults@2
             displayName: 'Publish unit test coverage'
             condition: succeededOrFailed()
             inputs:
-              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/UnitTests/**/coverage.cobertura.xml'
               pathToSources: '$(Build.SourcesDirectory)'
 
   - stage: IntegrationTests
@@ -118,12 +116,8 @@ stages:
     dependsOn: UnitTests
     condition: succeeded()
     jobs:
-      - job: RunIntegrationTests
+      - job: RunIntegrationAndApiTests
         displayName: 'Run Integration and API Tests'
-        services:
-          sqlserver: sqlserver
-          redis: redis
-
         steps:
           - checkout: self
             displayName: 'Checkout repository'
@@ -138,69 +132,73 @@ stages:
             displayName: 'Restore solution'
 
           - script: |
-              echo "Waiting for SQL Server container to be ready."
+              docker --version
+              docker compose version
+            displayName: 'Show Docker information'
 
-              containerId=$(docker ps --filter "ancestor=mcr.microsoft.com/mssql/server:2022-latest" --format "{{.ID}}" | head -n 1)
+          - script: |
+              docker compose up -d
+              docker compose ps
+            displayName: 'Start integration test dependencies'
 
-              if [ -z "$containerId" ]; then
-                echo "SQL Server container was not found."
-                docker ps
-                exit 1
-              fi
+          - script: |
+              echo "Waiting for SQL Server to be ready..."
 
-              echo "SQL Server container id: $containerId"
-
-              for i in {1..60}; do
-                if docker logs "$containerId" 2>&1 | grep -q "SQL Server is now ready for client connections"; then
+              for i in {1..90}; do
+                if docker logs gauss-sqlserver 2>&1 | grep -q "SQL Server is now ready for client connections"; then
                   echo "SQL Server is ready."
                   exit 0
                 fi
 
-                echo "SQL Server is not ready yet. Attempt $i/60..."
+                echo "SQL Server is not ready yet. Attempt $i/90..."
                 sleep 2
               done
 
               echo "SQL Server did not become ready in time."
-              docker logs "$containerId"
+              docker compose ps
+              docker logs gauss-sqlserver
               exit 1
             displayName: 'Wait for SQL Server'
 
           - script: |
-              echo "Waiting for Redis container to be ready."
+              echo "Waiting for Redis to be ready..."
 
-              containerId=$(docker ps --filter "ancestor=redis:7-alpine" --format "{{.ID}}" | head -n 1)
-
-              if [ -z "$containerId" ]; then
-                echo "Redis container was not found."
-                docker ps
-                exit 1
-              fi
-
-              echo "Redis container id: $containerId"
-
-              for i in {1..30}; do
-                if docker exec "$containerId" redis-cli ping | grep -q "PONG"; then
+              for i in {1..60}; do
+                if docker exec gauss-redis redis-cli ping | grep -q "PONG"; then
                   echo "Redis is ready."
                   exit 0
                 fi
 
-                echo "Redis is not ready yet. Attempt $i/30..."
+                echo "Redis is not ready yet. Attempt $i/60..."
                 sleep 1
               done
 
               echo "Redis did not become ready in time."
-              docker logs "$containerId"
+              docker compose ps
+              docker logs gauss-redis
               exit 1
             displayName: 'Wait for Redis'
 
-          - script: >
-              dotnet test "$(solutionPath)"
-              --configuration "$(buildConfiguration)"
-              --logger "trx;LogFilePrefix=integration-tests"
-              --results-directory "$(Agent.TempDirectory)/TestResults"
-              --collect:"XPlat Code Coverage"
-              --filter "Layer=Infrastructure|Layer=Api"
-            displayName: 'Run integration and API tests'
+          - script: |
+              dotnet test "$(identityInfrastructureTestProject)" \
+                --configuration "$(buildConfiguration)" \
+                --logger "trx;LogFilePrefix=identity-infrastructure-tests" \
+                --results-directory "$(Agent.TempDirectory)/TestResults/IntegrationTests/Infrastructure" \
+                --collect:"XPlat Code Coverage"
+            displayName: 'Run Identity infrastructure tests'
+            env:
+              GAUSS_TEST_SQLSERVER_HOST: 'localhost,1433'
+              GAUSS_TEST_SQLSERVER_USER: 'sa'
+              GAUSS_TEST_SQLSERVER_PASSWORD: '$(sqlServerPassword)'
+              GAUSS_TEST_REDIS_CONNECTION_STRING: 'localhost:6379,abortConnect=false,allowAdmin=true'
+
+          - script: |
+              dotnet test "$(identityApiTestProject)" \
+                --configuration "$(buildConfiguration)" \
+                --logger "trx;LogFilePrefix=identity-api-tests" \
+                --results-directory "$(Agent.TempDirectory)/TestResults/IntegrationTests/Api" \
+                --collect:"XPlat Code Coverage"
+            displayName: 'Run Identity API tests'
             env:
               GAUSS_TEST_SQLSERVER_HOST: 'localhost,1433'
               GAUSS_TEST_SQLSERVER_USER: 'sa'
@@ -212,12 +210,17 @@ stages:
             condition: succeededOrFailed()
             inputs:
               testResultsFormat: 'VSTest'
-              testResultsFiles: '$(Agent.TempDirectory)/TestResults/**/*.trx'
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/IntegrationTests/**/*.trx'
               failTaskOnFailedTests: true
 
           - task: PublishCodeCoverageResults@2
             displayName: 'Publish integration and API test coverage'
             condition: succeededOrFailed()
             inputs:
-              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/IntegrationTests/**/coverage.cobertura.xml'
               pathToSources: '$(Build.SourcesDirectory)'
+
+          - script: |
+              docker compose down -v --remove-orphans
+            displayName: 'Stop integration test dependencies'
+            condition: always()

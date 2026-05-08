@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\..\src\services\identity\Gauss.Identity.Application\Gauss.Identity.Application.csproj" />
     <ProjectReference Include="..\..\..\src\services\identity\Gauss.Identity.Infrastructure\Gauss.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\database\Gauss.Database.Migrations\Gauss.Database.Migrations.csproj" />
+    <ProjectReference Include="..\..\Shared\Gauss.Testing\Gauss.Testing.csproj" />
   </ItemGroup>
 
   <ItemGroup>
