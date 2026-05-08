@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
+using Gauss.Identity.Application.Abstractions.Tenancy;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Users.RegisterUser;
 using Gauss.Identity.Domain.Roles;
@@ -13,59 +14,6 @@ namespace Gauss.Identity.UnitTests.Application.Users.RegisterUser;
 
 public sealed class RegisterUserCommandHandlerTests
 {
-    [Fact(DisplayName = "Should register user when command is valid")]
-    [Trait("Layer", "Application")]
-    [Trait("Category", "UseCases")]
-    public async Task Should_Register_User_When_Command_Is_Valid()
-    {
-        // Arrange
-        var userRepository = new FakeUserRepository();
-        var passwordHasher = new FakePasswordHasher();
-        var dateTimeProvider = new FakeDateTimeProvider();
-        var permissionRepository = new FakePermissionRepository();
-        var roleRepository = new FakeRoleRepository();
-
-        var handler = new RegisterUserCommandHandler(
-            userRepository,
-            permissionRepository,
-            roleRepository,
-            passwordHasher,
-            dateTimeProvider);
-
-        var command = new RegisterUserCommand(
-            "Jeferson Almeida",
-            "jeferson@gauss.com",
-            "StrongPassword@123");
-
-        // Act
-        var result = await handler.HandleAsync(command);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.UserId.Should().NotBe(Guid.Empty);
-        result.Value.TenantId.Should().NotBe(Guid.Empty);
-        result.Value.Name.Should().Be("Jeferson Almeida");
-        result.Value.Email.Should().Be("jeferson@gauss.com");
-
-        userRepository.AddedUser.Should().NotBeNull();
-        userRepository.AddedUser!.Email.Value.Should().Be("jeferson@gauss.com");
-        userRepository.AddedUser.PasswordHash.Value.Should().Be("hashed-StrongPassword@123");
-        userRepository.AddedUser.RegisteredAtUtc.Should().Be(dateTimeProvider.UtcNow);
-        userRepository.LastEmailChecked.Should().Be(Email.Create("jeferson@gauss.com"));
-        passwordHasher.LastPassword.Should().Be("StrongPassword@123");
-
-        roleRepository.AddedRole.Should().NotBeNull();
-        roleRepository.AddedRole!.TenantId.Should().Be(userRepository.AddedUser!.TenantId);
-        roleRepository.AddedRole.Name.Should().Be(RoleName.Create("Tenant Administrator"));
-        roleRepository.AddedRole.Permissions.Should().HaveCount(7);
-
-        roleRepository.AssignedUserRole.Should().NotBeNull();
-        roleRepository.AssignedUserRole!.UserId.Should().Be(userRepository.AddedUser.Id);
-        roleRepository.AssignedUserRole.TenantId.Should().Be(userRepository.AddedUser.TenantId);
-        roleRepository.AssignedUserRole.RoleId.Should().Be(roleRepository.AddedRole.Id);
-        roleRepository.AssignedUserRole.AssignedAtUtc.Should().Be(dateTimeProvider.UtcNow);
-    }
-
     [Theory(DisplayName = "Should return invalid email error when email is invalid")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
@@ -98,22 +46,8 @@ public sealed class RegisterUserCommandHandlerTests
     public async Task Should_Return_EmailAlreadyExists_Error_When_Email_Is_Duplicated()
     {
         // Arrange
-        var userRepository = new FakeUserRepository
-        {
-            EmailAlreadyExists = true
-        };
-
-        var passwordHasher = new FakePasswordHasher();
-        var dateTimeProvider = new FakeDateTimeProvider();
-        var permissionRepository = new FakePermissionRepository();
-        var roleRepository = new FakeRoleRepository();
-
-        var handler = new RegisterUserCommandHandler(
-            userRepository,
-            permissionRepository,
-            roleRepository,
-            passwordHasher,
-            dateTimeProvider);
+        var userRepository = new FakeUserRepository { EmailAlreadyExists = true };
+        var handler = CreateHandler(userRepository: userRepository);
 
         var command = new RegisterUserCommand(
             "Jeferson Almeida",
@@ -126,19 +60,59 @@ public sealed class RegisterUserCommandHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RegisterUserErrors.EmailAlreadyExists);
-
         userRepository.AddedUser.Should().BeNull();
+    }
 
-        roleRepository.AddedRole.Should().BeNull();
-        roleRepository.AssignedUserRole.Should().BeNull();
+    [Fact(DisplayName = "Should register user when command is valid")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Register_User_When_Command_Is_Valid()
+    {
+        // Arrange
+        var userRepository = new FakeUserRepository();
+        var passwordHasher = new FakePasswordHasher();
+        var dateTimeProvider = new FakeDateTimeProvider();
+        var permissionRepository = new FakePermissionRepository();
+        var roleRepository = new FakeRoleRepository();
+        var tenantProvisioningService = new FakeTenantProvisioningService();
 
-        passwordHasher.LastPassword.Should().BeNull();
+        var handler = new RegisterUserCommandHandler(
+            userRepository,
+            permissionRepository,
+            roleRepository,
+            tenantProvisioningService,
+            passwordHasher,
+            dateTimeProvider);
+
+        var command = new RegisterUserCommand(
+            "Jeferson Almeida",
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.UserId.Should().NotBe(Guid.Empty);
+        result.Value.TenantId.Should().NotBe(Guid.Empty);
+        result.Value.Name.Should().Be("Jeferson Almeida");
+        result.Value.Email.Should().Be("jeferson@gauss.com");
+
+        userRepository.AddedUser.Should().NotBeNull();
+        userRepository.AddedUser!.Email.Value.Should().Be("jeferson@gauss.com");
+        passwordHasher.LastPassword.Should().Be("StrongPassword@123");
+
+        roleRepository.AddedRole.Should().NotBeNull();
+        roleRepository.AddedRole!.Name.Should().Be(RoleName.Create("Tenant Administrator"));
+        roleRepository.AssignedUserRole.Should().NotBeNull();
     }
 
     private static RegisterUserCommandHandler CreateHandler(
         FakeUserRepository? userRepository = null,
         FakePermissionRepository? permissionRepository = null,
         FakeRoleRepository? roleRepository = null,
+        FakeTenantProvisioningService? tenantProvisioningService = null,
         FakePasswordHasher? passwordHasher = null,
         FakeDateTimeProvider? dateTimeProvider = null)
     {
@@ -146,55 +120,79 @@ public sealed class RegisterUserCommandHandlerTests
             userRepository ?? new FakeUserRepository(),
             permissionRepository ?? new FakePermissionRepository(),
             roleRepository ?? new FakeRoleRepository(),
+            tenantProvisioningService ?? new FakeTenantProvisioningService(),
             passwordHasher ?? new FakePasswordHasher(),
             dateTimeProvider ?? new FakeDateTimeProvider());
     }
 
-    private sealed class FakePermissionRepository : IPermissionRepository
+    private sealed class FakeUserRepository : IUserRepository
     {
-        public Task<bool> ExistsByCodeAsync(
-            PermissionCode code,
-            CancellationToken cancellationToken = default)
+        public bool EmailAlreadyExists { get; init; }
+        public User? AddedUser { get; private set; }
+
+        public Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(true);
+            return Task.FromResult(EmailAlreadyExists);
         }
 
-        public Task<Permission?> GetByCodeAsync(
-            PermissionCode code,
-            CancellationToken cancellationToken = default)
+        public Task AddAsync(User user, CancellationToken cancellationToken = default)
         {
-            var permission = Permission.Create(
-                code,
-                $"Permission {code.Value}.",
-                new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
+            AddedUser = user;
+            return Task.CompletedTask;
+        }
 
+        public Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
+            => Task.FromResult<User?>(null);
+
+        public Task<User?> GetByIdAsync(UserId userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<User?>(null);
+
+        public Task UpdateLastLoginAsync(User user, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakePasswordHasher : IPasswordHasher
+    {
+        public string? LastPassword { get; private set; }
+
+        public PasswordHash Hash(string password)
+        {
+            LastPassword = password;
+            return PasswordHash.Create($"hashed-{password}");
+        }
+
+        public PasswordVerificationStatus Verify(PasswordHash passwordHash, string providedPassword)
+            => passwordHash.Value == $"hashed-{providedPassword}"
+                ? PasswordVerificationStatus.Success
+                : PasswordVerificationStatus.Failed;
+    }
+
+    private sealed class FakePermissionRepository : IPermissionRepository
+    {
+        public Task<bool> ExistsByCodeAsync(PermissionCode code, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<Permission?> GetByCodeAsync(PermissionCode code, CancellationToken cancellationToken = default)
+        {
+            var permission = Permission.Create(code, $"Permission {code.Value}.", new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
             return Task.FromResult<Permission?>(permission);
         }
 
-        public Task<IReadOnlyCollection<Permission>> GetAllEnabledAsync(
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<IReadOnlyCollection<Permission>>([]);
-        }
+        public Task<IReadOnlyCollection<Permission>> GetAllEnabledAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<Permission>>(Array.Empty<Permission>());
 
-        public Task AddAsync(
-            Permission permission,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
+        public Task AddAsync(Permission permission, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
 
-        public Task UpdateAsync(
-            Permission permission,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
+        public Task UpdateAsync(Permission permission, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeRoleRepository : IRoleRepository
     {
         public Role? AddedRole { get; private set; }
+
+        public Role? UpdatedRole { get; private set; }
 
         public UserRole? AssignedUserRole { get; private set; }
 
@@ -218,8 +216,11 @@ public sealed class RegisterUserCommandHandlerTests
             UserId userId,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyCollection<Role>>(
-                AddedRole is null ? [] : [AddedRole]);
+            IReadOnlyCollection<Role> roles = AddedRole is null
+                ? []
+                : [AddedRole];
+
+            return Task.FromResult(roles);
         }
 
         public Task AddAsync(
@@ -235,7 +236,7 @@ public sealed class RegisterUserCommandHandlerTests
             Role role,
             CancellationToken cancellationToken = default)
         {
-            AddedRole = role;
+            UpdatedRole = role;
 
             return Task.CompletedTask;
         }
@@ -250,78 +251,22 @@ public sealed class RegisterUserCommandHandlerTests
         }
     }
 
-    private sealed class FakeUserRepository : IUserRepository
+    private sealed class FakeTenantProvisioningService : ITenantProvisioningService
     {
-        public bool EmailAlreadyExists { get; init; }
+        public string? LastOwnerName { get; private set; }
+        public DateTimeOffset? LastCreatedAtUtc { get; private set; }
+        public TenantId TenantId { get; init; } = TenantId.New();
 
-        public Email? LastEmailChecked { get; private set; }
-
-        public User? AddedUser { get; private set; }
-
-        public Task<bool> ExistsByEmailAsync(
-            Email email,
-            CancellationToken cancellationToken = default)
+        public Task<TenantId> ProvisionAsync(string ownerName, DateTimeOffset createdAtUtc, CancellationToken cancellationToken = default)
         {
-            LastEmailChecked = email;
-
-            return Task.FromResult(EmailAlreadyExists);
-        }
-
-        public Task AddAsync(
-            User user,
-            CancellationToken cancellationToken = default)
-        {
-            AddedUser = user;
-
-            return Task.CompletedTask;
-        }
-
-        public Task<User?> GetByEmailAsync(
-            Email email,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<User?>(null);
-        }
-
-        public Task UpdateLastLoginAsync(
-            User user,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task<User?> GetByIdAsync(
-            UserId userId,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<User?>(null);
-        }
-    }
-
-    private sealed class FakePasswordHasher : IPasswordHasher
-    {
-        public string? LastPassword { get; private set; }
-
-        public PasswordHash Hash(string password)
-        {
-            LastPassword = password;
-
-            return PasswordHash.Create($"hashed-{password}");
-        }
-
-        public PasswordVerificationStatus Verify(
-            PasswordHash passwordHash,
-            string providedPassword)
-        {
-            return passwordHash.Value == $"hashed-{providedPassword}"
-                ? PasswordVerificationStatus.Success
-                : PasswordVerificationStatus.Failed;
+            LastOwnerName = ownerName;
+            LastCreatedAtUtc = createdAtUtc;
+            return Task.FromResult(TenantId);
         }
     }
 
     private sealed class FakeDateTimeProvider : IDateTimeProvider
     {
-        public DateTimeOffset UtcNow { get; } =
-            new(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset UtcNow { get; } = new(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
     }
 }

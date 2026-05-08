@@ -27,8 +27,12 @@ public sealed class CurrentUserEndpointTests(
         var email = $"jeferson-{Guid.NewGuid():N}@gauss.com";
         const string password = "StrongPassword@123";
 
-        await RegisterUserAsync(client, email, password);
-        await ActivateUserAsync(email);
+        var registeredUser = await RegisterUserAsync(
+            client,
+            email,
+            password);
+
+        await ActivateUserAsync(registeredUser.UserId);
 
         var accessToken = await LoginAndGetAccessTokenAsync(
             client,
@@ -51,8 +55,8 @@ public sealed class CurrentUserEndpointTests(
 
         var root = await response.ReadJsonRootElementAsync();
 
-        root.GetProperty("userId").GetGuid().Should().NotBe(Guid.Empty);
-        root.GetProperty("tenantId").GetGuid().Should().NotBe(Guid.Empty);
+        root.GetProperty("userId").GetGuid().Should().Be(registeredUser.UserId);
+        root.GetProperty("tenantId").GetGuid().Should().Be(registeredUser.TenantId);
         root.GetProperty("name").GetString().Should().Be("Jeferson Almeida");
         root.GetProperty("email").GetString().Should().Be(email);
     }
@@ -93,7 +97,7 @@ public sealed class CurrentUserEndpointTests(
         await response.ShouldHaveStatusCodeAsync(HttpStatusCode.Unauthorized);
     }
 
-    private static async Task RegisterUserAsync(
+    private static async Task<RegisteredUserResult> RegisterUserAsync(
         HttpClient client,
         string email,
         string password)
@@ -110,9 +114,15 @@ public sealed class CurrentUserEndpointTests(
             request);
 
         await response.ShouldHaveStatusCodeAsync(HttpStatusCode.Created);
+
+        var root = await response.ReadJsonRootElementAsync();
+
+        return new RegisteredUserResult(
+            root.GetProperty("userId").GetGuid(),
+            root.GetProperty("tenantId").GetGuid());
     }
 
-    private async Task ActivateUserAsync(string email)
+    private async Task ActivateUserAsync(Guid userId)
     {
         await using var connection = new SqlConnection(databaseFixture.ConnectionString);
 
@@ -121,7 +131,7 @@ public sealed class CurrentUserEndpointTests(
             SET
                 [Status] = @Status,
                 [EmailConfirmedAtUtc] = @EmailConfirmedAtUtc
-            WHERE [NormalizedEmail] = @NormalizedEmail
+            WHERE [Id] = @UserId
               AND [IsDeleted] = 0;
             """;
 
@@ -129,9 +139,9 @@ public sealed class CurrentUserEndpointTests(
             sql,
             new
             {
+                UserId = userId,
                 Status = (int)UserStatus.Active,
-                EmailConfirmedAtUtc = new DateTimeOffset(2026, 04, 30, 12, 5, 0, TimeSpan.Zero),
-                NormalizedEmail = email.ToLowerInvariant()
+                EmailConfirmedAtUtc = new DateTimeOffset(2026, 04, 30, 12, 5, 0, TimeSpan.Zero)
             });
 
         affectedRows.Should().Be(1);
@@ -159,4 +169,8 @@ public sealed class CurrentUserEndpointTests(
         return root.GetProperty("accessToken").GetString()
             ?? throw new InvalidOperationException("Access token was not returned by login endpoint.");
     }
+
+    private sealed record RegisteredUserResult(
+        Guid UserId,
+        Guid TenantId);
 }

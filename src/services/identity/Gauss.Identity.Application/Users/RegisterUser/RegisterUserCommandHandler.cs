@@ -2,6 +2,7 @@ using Gauss.BuildingBlocks.Application.Abstractions.Messaging;
 using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
+using Gauss.Identity.Application.Abstractions.Tenancy;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Authorization;
 using Gauss.Identity.Domain.Roles;
@@ -16,6 +17,7 @@ public sealed class RegisterUserCommandHandler(
     IUserRepository userRepository,
     IPermissionRepository permissionRepository,
     IRoleRepository roleRepository,
+    ITenantProvisioningService tenantProvisioningService,
     IPasswordHasher passwordHasher,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
@@ -50,7 +52,11 @@ public sealed class RegisterUserCommandHandler(
 
         var utcNow = dateTimeProvider.UtcNow;
 
-        var tenantId = TenantId.New();
+        var tenantId = await tenantProvisioningService.ProvisionAsync(
+            command.Name,
+            utcNow,
+            cancellationToken);
+
         var passwordHash = passwordHasher.Hash(command.Password);
 
         var user = User.Register(
