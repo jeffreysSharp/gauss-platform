@@ -2,7 +2,7 @@ using Gauss.BuildingBlocks.Application.Abstractions.Messaging;
 using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
-using Gauss.Identity.Application.Abstractions.Tenancy;
+using Gauss.Identity.Application.Abstractions.Provisioning;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Authorization;
 using Gauss.Identity.Domain.Roles;
@@ -16,8 +16,7 @@ namespace Gauss.Identity.Application.Users.RegisterUser;
 public sealed class RegisterUserCommandHandler(
     IUserRepository userRepository,
     IPermissionRepository permissionRepository,
-    IRoleRepository roleRepository,
-    ITenantProvisioningService tenantProvisioningService,
+    IRegistrationProvisioningService registrationProvisioningService,
     IPasswordHasher passwordHasher,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<RegisterUserCommand, RegisterUserResponse>
@@ -51,11 +50,7 @@ public sealed class RegisterUserCommandHandler(
         }
 
         var utcNow = dateTimeProvider.UtcNow;
-
-        var tenantId = await tenantProvisioningService.ProvisionAsync(
-            command.Name,
-            utcNow,
-            cancellationToken);
+        var tenantId = TenantId.New();
 
         var passwordHash = passwordHasher.Hash(command.Password);
 
@@ -66,10 +61,6 @@ public sealed class RegisterUserCommandHandler(
             passwordHash,
             utcNow);
 
-        await userRepository.AddAsync(
-            user,
-            cancellationToken);
-
         var adminRole = Role.Create(
             tenantId,
             RoleName.Create(InitialAdminRoleName),
@@ -79,17 +70,17 @@ public sealed class RegisterUserCommandHandler(
             adminRole,
             cancellationToken);
 
-        await roleRepository.AddAsync(
-            adminRole,
-            cancellationToken);
-
         var userRole = UserRole.Assign(
             user.Id,
             tenantId,
             adminRole.Id,
             utcNow);
 
-        await roleRepository.AssignToUserAsync(
+        await registrationProvisioningService.ProvisionAsync(
+            tenantId,
+            command.Name,
+            user,
+            adminRole,
             userRole,
             cancellationToken);
 
