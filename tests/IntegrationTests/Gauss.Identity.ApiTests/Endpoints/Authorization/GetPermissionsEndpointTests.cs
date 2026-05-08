@@ -7,6 +7,7 @@ using Gauss.Identity.ApiTests.Fixtures;
 using Gauss.Identity.Application.Authorization;
 using Gauss.Identity.Domain.Users;
 using Gauss.Testing.Api;
+using Gauss.Testing.Fixtures;
 using Microsoft.Data.SqlClient;
 
 namespace Gauss.Identity.ApiTests.Endpoints.Authorization;

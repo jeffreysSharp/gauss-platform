@@ -74,6 +74,7 @@ public sealed class LoginCommandHandler(
 
         var refreshTokenSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: user.Id.Value,
             TenantId: user.TenantId.Value,
             RefreshTokenHash: refreshTokenHash,

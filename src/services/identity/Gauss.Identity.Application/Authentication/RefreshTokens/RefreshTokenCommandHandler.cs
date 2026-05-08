@@ -36,6 +36,23 @@ public sealed class RefreshTokenCommandHandler(
                 RefreshTokenErrors.InvalidToken);
         }
 
+        if (currentSession.IsReusableAttackCandidate(utcNow))
+        {
+            var compromisedSession = currentSession.MarkReuseDetected(utcNow);
+
+            await refreshTokenStore.UpdateAsync(
+                compromisedSession,
+                cancellationToken);
+
+            await refreshTokenStore.RevokeFamilyAsync(
+                compromisedSession.FamilyId,
+                utcNow,
+                cancellationToken);
+
+            return Result<RefreshTokenResponse>.Failure(
+                RefreshTokenErrors.InvalidToken);
+        }
+
         if (!currentSession.IsActive(utcNow))
         {
             return Result<RefreshTokenResponse>.Failure(
@@ -69,6 +86,7 @@ public sealed class RefreshTokenCommandHandler(
 
         var newSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: currentSession.FamilyId,
             UserId: user.Id.Value,
             TenantId: user.TenantId.Value,
             RefreshTokenHash: newRefreshTokenHash,
@@ -79,8 +97,12 @@ public sealed class RefreshTokenCommandHandler(
             newSession,
             cancellationToken);
 
-        await refreshTokenStore.DeleteAsync(
-            currentSession.RefreshTokenHash,
+        var rotatedCurrentSession = currentSession.Rotate(
+            newSession.SessionId,
+            utcNow);
+
+        await refreshTokenStore.UpdateAsync(
+            rotatedCurrentSession,
             cancellationToken);
 
         var response = new RefreshTokenResponse(

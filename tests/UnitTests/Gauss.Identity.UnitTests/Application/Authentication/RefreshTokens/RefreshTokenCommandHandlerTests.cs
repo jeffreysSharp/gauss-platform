@@ -70,11 +70,18 @@ public sealed class RefreshTokenCommandHandlerTests
         refreshTokenStore.StoredSession.Should().NotBeNull();
         refreshTokenStore.StoredSession!.UserId.Should().Be(user.Id.Value);
         refreshTokenStore.StoredSession.TenantId.Should().Be(user.TenantId.Value);
+        refreshTokenStore.StoredSession.FamilyId.Should().Be(currentSession.FamilyId);
         refreshTokenStore.StoredSession.RefreshTokenHash.Should().Be("hashed-new-refresh-token-value");
         refreshTokenStore.StoredSession.IssuedAtUtc.Should().Be(dateTimeProvider.UtcNow);
         refreshTokenStore.StoredSession.ExpiresAtUtc.Should().Be(refreshTokenGenerator.RefreshToken.ExpiresAtUtc);
 
-        refreshTokenStore.DeletedHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(currentSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(currentSession.FamilyId);
+        refreshTokenStore.UpdatedSession.RefreshTokenHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.RotatedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.ReplacedBySessionId.Should().Be(refreshTokenStore.StoredSession.SessionId);
+        refreshTokenStore.UpdatedSession.IsRotated.Should().BeTrue();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session does not exist")]
@@ -102,7 +109,8 @@ public sealed class RefreshTokenCommandHandlerTests
 
         refreshTokenStore.LastHashChecked.Should().Be("hashed-missing-refresh-token-value");
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when refresh token session is expired")]
@@ -115,6 +123,7 @@ public sealed class RefreshTokenCommandHandlerTests
 
         var expiredSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             RefreshTokenHash: "hashed-current-refresh-token-value",
@@ -140,13 +149,14 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should return invalid token when refresh token session is revoked")]
+    [Fact(DisplayName = "Should revoke token family when revoked refresh token is reused")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Return_InvalidToken_When_RefreshTokenSession_Is_Revoked()
+    public async Task Should_Revoke_TokenFamily_When_Revoked_RefreshToken_Is_Reused()
     {
         // Arrange
         var user = CreateActiveUser();
@@ -155,14 +165,19 @@ public sealed class RefreshTokenCommandHandlerTests
         var revokedSession = CreateActiveSession(
                 user,
                 dateTimeProvider.UtcNow)
-            .Revoke(dateTimeProvider.UtcNow);
+            .Revoke(dateTimeProvider.UtcNow.AddMinutes(-1));
 
         var refreshTokenStore = new FakeRefreshTokenStore
         {
             Session = revokedSession
         };
 
+        var accessTokenProvider = new FakeAccessTokenProvider();
+        var refreshTokenGenerator = new FakeRefreshTokenGenerator();
+
         var handler = CreateHandler(
+            accessTokenProvider: accessTokenProvider,
+            refreshTokenGenerator: refreshTokenGenerator,
             refreshTokenStore: refreshTokenStore,
             dateTimeProvider: dateTimeProvider);
 
@@ -175,14 +190,25 @@ public sealed class RefreshTokenCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(revokedSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(revokedSession.FamilyId);
+        refreshTokenStore.UpdatedSession.IsReuseDetected.Should().BeTrue();
+        refreshTokenStore.UpdatedSession.ReuseDetectedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.RevokedAtUtc.Should().Be(revokedSession.RevokedAtUtc);
+
+        refreshTokenStore.RevokedFamilyId.Should().Be(revokedSession.FamilyId);
+        refreshTokenStore.RevokedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        accessTokenProvider.LastUser.Should().BeNull();
+        refreshTokenGenerator.LastIssuedAtUtc.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should return invalid token when refresh token session is rotated")]
+    [Fact(DisplayName = "Should revoke token family when rotated refresh token is reused")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Return_InvalidToken_When_RefreshTokenSession_Is_Rotated()
+    public async Task Should_Revoke_TokenFamily_When_Rotated_RefreshToken_Is_Reused()
     {
         // Arrange
         var user = CreateActiveUser();
@@ -193,14 +219,19 @@ public sealed class RefreshTokenCommandHandlerTests
                 dateTimeProvider.UtcNow)
             .Rotate(
                 Guid.NewGuid(),
-                dateTimeProvider.UtcNow);
+                dateTimeProvider.UtcNow.AddMinutes(-1));
 
         var refreshTokenStore = new FakeRefreshTokenStore
         {
             Session = rotatedSession
         };
 
+        var accessTokenProvider = new FakeAccessTokenProvider();
+        var refreshTokenGenerator = new FakeRefreshTokenGenerator();
+
         var handler = CreateHandler(
+            accessTokenProvider: accessTokenProvider,
+            refreshTokenGenerator: refreshTokenGenerator,
             refreshTokenStore: refreshTokenStore,
             dateTimeProvider: dateTimeProvider);
 
@@ -213,8 +244,19 @@ public sealed class RefreshTokenCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(RefreshTokenErrors.InvalidToken);
 
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(rotatedSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(rotatedSession.FamilyId);
+        refreshTokenStore.UpdatedSession.IsReuseDetected.Should().BeTrue();
+        refreshTokenStore.UpdatedSession.ReuseDetectedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.RevokedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+
+        refreshTokenStore.RevokedFamilyId.Should().Be(rotatedSession.FamilyId);
+        refreshTokenStore.RevokedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        accessTokenProvider.LastUser.Should().BeNull();
+        refreshTokenGenerator.LastIssuedAtUtc.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid token when user does not exist")]
@@ -227,6 +269,7 @@ public sealed class RefreshTokenCommandHandlerTests
 
         var currentSession = new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: Guid.NewGuid(),
             TenantId: Guid.NewGuid(),
             RefreshTokenHash: "hashed-current-refresh-token-value",
@@ -259,7 +302,8 @@ public sealed class RefreshTokenCommandHandlerTests
 
         userRepository.LastUserIdChecked.Should().Be(UserId.From(currentSession.UserId));
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return user unavailable when user cannot authenticate")]
@@ -295,13 +339,14 @@ public sealed class RefreshTokenCommandHandlerTests
         result.Error.Should().Be(RefreshTokenErrors.UserUnavailable);
 
         refreshTokenStore.StoredSession.Should().BeNull();
-        refreshTokenStore.DeletedHash.Should().BeNull();
+        refreshTokenStore.UpdatedSession.Should().BeNull();
+        refreshTokenStore.RevokedFamilyId.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should delete old refresh token when refresh succeeds")]
+    [Fact(DisplayName = "Should rotate current refresh token when refresh succeeds")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Delete_Old_RefreshToken_When_Refresh_Succeeds()
+    public async Task Should_Rotate_Current_RefreshToken_When_Refresh_Succeeds()
     {
         // Arrange
         var user = CreateActiveUser();
@@ -328,7 +373,16 @@ public sealed class RefreshTokenCommandHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        refreshTokenStore.DeletedHash.Should().Be(currentSession.RefreshTokenHash);
+
+        refreshTokenStore.StoredSession.Should().NotBeNull();
+        refreshTokenStore.UpdatedSession.Should().NotBeNull();
+
+        refreshTokenStore.UpdatedSession!.SessionId.Should().Be(currentSession.SessionId);
+        refreshTokenStore.UpdatedSession.FamilyId.Should().Be(currentSession.FamilyId);
+        refreshTokenStore.UpdatedSession.RefreshTokenHash.Should().Be(currentSession.RefreshTokenHash);
+        refreshTokenStore.UpdatedSession.RotatedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        refreshTokenStore.UpdatedSession.ReplacedBySessionId.Should().Be(refreshTokenStore.StoredSession!.SessionId);
+        refreshTokenStore.UpdatedSession.IsRotated.Should().BeTrue();
     }
 
     private static RefreshTokenCommandHandler CreateHandler(
@@ -354,6 +408,7 @@ public sealed class RefreshTokenCommandHandlerTests
     {
         return new RefreshTokenSession(
             SessionId: Guid.NewGuid(),
+            FamilyId: Guid.NewGuid(),
             UserId: user.Id.Value,
             TenantId: user.TenantId.Value,
             RefreshTokenHash: "hashed-current-refresh-token-value",
@@ -488,13 +543,17 @@ public sealed class RefreshTokenCommandHandlerTests
 
     private sealed class FakeRefreshTokenStore : IRefreshTokenStore
     {
-        public RefreshTokenSession? Session { get; init; }
+        public RefreshTokenSession? Session { get; set; }
 
         public string? LastHashChecked { get; private set; }
 
         public RefreshTokenSession? StoredSession { get; private set; }
 
-        public string? DeletedHash { get; private set; }
+        public RefreshTokenSession? UpdatedSession { get; private set; }
+
+        public Guid? RevokedFamilyId { get; private set; }
+
+        public DateTimeOffset? RevokedAtUtc { get; private set; }
 
         public Task StoreAsync(
             RefreshTokenSession session,
@@ -514,11 +573,61 @@ public sealed class RefreshTokenCommandHandlerTests
             return Task.FromResult(Session);
         }
 
-        public Task DeleteAsync(
-            string refreshTokenHash,
+        public Task UpdateAsync(
+            RefreshTokenSession session,
             CancellationToken cancellationToken = default)
         {
-            DeletedHash = refreshTokenHash;
+            UpdatedSession = session;
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+            Guid familyId,
+            CancellationToken cancellationToken = default)
+        {
+            var sessions = new List<RefreshTokenSession>();
+
+            if (Session is not null && Session.FamilyId == familyId)
+            {
+                sessions.Add(Session);
+            }
+
+            if (StoredSession is not null && StoredSession.FamilyId == familyId)
+            {
+                sessions.Add(StoredSession);
+            }
+
+            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
+            {
+                sessions.Add(UpdatedSession);
+            }
+
+            return Task.FromResult<IReadOnlyCollection<RefreshTokenSession>>(sessions);
+        }
+
+        public Task RevokeFamilyAsync(
+            Guid familyId,
+            DateTimeOffset revokedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            RevokedFamilyId = familyId;
+            RevokedAtUtc = revokedAtUtc;
+
+            if (Session is not null && Session.FamilyId == familyId)
+            {
+                Session = Session.Revoke(revokedAtUtc);
+            }
+
+            if (StoredSession is not null && StoredSession.FamilyId == familyId)
+            {
+                StoredSession = StoredSession.Revoke(revokedAtUtc);
+            }
+
+            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
+            {
+                UpdatedSession = UpdatedSession.Revoke(revokedAtUtc);
+            }
 
             return Task.CompletedTask;
         }

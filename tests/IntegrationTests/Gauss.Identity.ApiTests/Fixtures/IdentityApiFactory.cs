@@ -1,3 +1,4 @@
+using Gauss.Testing.Fixtures;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -24,10 +25,9 @@ public sealed class IdentityApiFactory(
                 ["Identity:AccessToken:ExpirationMinutes"] = "15",
 
                 ["Identity:RefreshToken:ExpirationMinutes"] = "10080",
-
                 ["Identity:Redis:ConnectionString"] =
-                    Environment.GetEnvironmentVariable("GAUSS_TEST_REDIS_CONNECTION_STRING")  ??
-                        "localhost:6379,abortConnect=false,allowAdmin=true"
+                    Environment.GetEnvironmentVariable("GAUSS_TEST_REDIS_CONNECTION_STRING")
+                    ?? "localhost:6379,abortConnect=false"
             };
 
             configurationBuilder.AddInMemoryCollection(configuration);

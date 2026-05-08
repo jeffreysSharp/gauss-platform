@@ -2,6 +2,7 @@ namespace Gauss.Identity.Application.Authentication.RefreshTokens;
 
 public sealed record RefreshTokenSession(
     Guid SessionId,
+    Guid FamilyId,
     Guid UserId,
     Guid TenantId,
     string RefreshTokenHash,
@@ -9,7 +10,8 @@ public sealed record RefreshTokenSession(
     DateTimeOffset ExpiresAtUtc,
     DateTimeOffset? RotatedAtUtc = null,
     DateTimeOffset? RevokedAtUtc = null,
-    Guid? ReplacedBySessionId = null)
+    Guid? ReplacedBySessionId = null,
+    DateTimeOffset? ReuseDetectedAtUtc = null)
 {
     public bool IsExpired(DateTimeOffset utcNow)
     {
@@ -20,11 +22,20 @@ public sealed record RefreshTokenSession(
 
     public bool IsRotated => RotatedAtUtc.HasValue;
 
+    public bool IsReuseDetected => ReuseDetectedAtUtc.HasValue;
+
     public bool IsActive(DateTimeOffset utcNow)
     {
         return !IsExpired(utcNow)
             && !IsRevoked
-            && !IsRotated;
+            && !IsRotated
+            && !IsReuseDetected;
+    }
+
+    public bool IsReusableAttackCandidate(DateTimeOffset utcNow)
+    {
+        return !IsExpired(utcNow)
+            && (IsRotated || IsRevoked || IsReuseDetected);
     }
 
     public RefreshTokenSession Rotate(
@@ -42,7 +53,16 @@ public sealed record RefreshTokenSession(
     {
         return this with
         {
-            RevokedAtUtc = revokedAtUtc
+            RevokedAtUtc = RevokedAtUtc ?? revokedAtUtc
+        };
+    }
+
+    public RefreshTokenSession MarkReuseDetected(DateTimeOffset reuseDetectedAtUtc)
+    {
+        return this with
+        {
+            ReuseDetectedAtUtc = reuseDetectedAtUtc,
+            RevokedAtUtc = RevokedAtUtc ?? reuseDetectedAtUtc
         };
     }
 }
