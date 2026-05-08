@@ -489,7 +489,8 @@ public sealed class LoginCommandHandlerTests
             PasswordHash.Create("hashed-password"),
             new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero));
 
-        user.LockUntil(DateTimeOffset.UtcNow.AddHours(1));
+        var utcNow = new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
+        user.LockUntil(utcNow.AddHours(1), utcNow);
 
         return user;
     }

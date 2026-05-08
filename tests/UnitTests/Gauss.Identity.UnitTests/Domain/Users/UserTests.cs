@@ -186,10 +186,11 @@ public sealed class UserTests
     {
         // Arrange
         var user = CreateUser();
-        var lockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15);
+        var utcNow = new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
+        var lockedUntilUtc = utcNow.AddMinutes(15);
 
         // Act
-        user.LockUntil(lockedUntilUtc);
+        user.LockUntil(lockedUntilUtc, utcNow);
 
         // Assert
         user.Status.Should().Be(UserStatus.Locked);
@@ -203,10 +204,27 @@ public sealed class UserTests
     {
         // Arrange
         var user = CreateUser();
-        var lockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var utcNow = new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
+        var lockedUntilUtc = utcNow.AddMinutes(-1);
 
         // Act
-        var action = () => user.LockUntil(lockedUntilUtc);
+        var action = () => user.LockUntil(lockedUntilUtc, utcNow);
+
+        // Assert
+        action.Should().Throw<ArgumentException>();
+    }
+
+    [Fact(DisplayName = "Should throw argument exception when lock expiration equals utcNow")]
+    [Trait("Layer", "Domain")]
+    [Trait("Category", "Aggregates")]
+    public void Should_Throw_ArgumentException_When_Lock_Expiration_Equals_UtcNow()
+    {
+        // Arrange
+        var user = CreateUser();
+        var utcNow = new DateTimeOffset(2026, 04, 30, 12, 0, 0, TimeSpan.Zero);
+
+        // Act
+        var action = () => user.LockUntil(utcNow, utcNow);
 
         // Assert
         action.Should().Throw<ArgumentException>();
