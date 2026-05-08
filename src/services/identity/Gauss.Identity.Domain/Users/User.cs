@@ -122,9 +122,9 @@ public sealed class User : AggregateRoot<UserId>
         LastLoginAtUtc = loggedInAtUtc;
     }
 
-    public void LockUntil(DateTimeOffset lockedUntilUtc)
+    public void LockUntil(DateTimeOffset lockedUntilUtc, DateTimeOffset utcNow)
     {
-        if (lockedUntilUtc <= DateTimeOffset.UtcNow)
+        if (lockedUntilUtc <= utcNow)
         {
             throw new ArgumentException(
                 "Lock expiration must be in the future.",
