@@ -11,9 +11,11 @@ public sealed class RedisRefreshTokenStore(
     IOptions<RefreshTokenOptions> refreshTokenOptions)
     : IRefreshTokenStore
 {
-    private const string KeyPrefix = "identity:refresh-token:";
+    private const string SessionKeyPrefix = "identity:refresh-token:";
+    private const string FamilyKeyPrefix = "identity:refresh-token-family:";
 
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonSerializerOptions =
+        new(JsonSerializerDefaults.Web);
 
     private readonly IDatabase _database = connectionMultiplexer.GetDatabase();
 
@@ -25,12 +27,6 @@ public sealed class RedisRefreshTokenStore(
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        var key = CreateKey(session.RefreshTokenHash);
-
-        var value = JsonSerializer.Serialize(
-            session,
-            JsonSerializerOptions);
-
         var timeToLive = CalculateTimeToLive(session);
 
         if (timeToLive <= TimeSpan.Zero)
@@ -38,19 +34,34 @@ public sealed class RedisRefreshTokenStore(
             return;
         }
 
+        var sessionKey = CreateSessionKey(session.RefreshTokenHash);
+        var familyKey = CreateFamilyKey(session.FamilyId);
+
+        var value = JsonSerializer.Serialize(
+            session,
+            JsonSerializerOptions);
+
         await _database.StringSetAsync(
-            key,
+            sessionKey,
             value,
+            timeToLive);
+
+        await _database.SetAddAsync(
+            familyKey,
+            session.RefreshTokenHash);
+
+        await ExtendFamilyKeyExpirationAsync(
+            familyKey,
             timeToLive);
     }
 
     public async Task<RefreshTokenSession?> GetByHashAsync(
-     string refreshTokenHash,
-     CancellationToken cancellationToken = default)
+        string refreshTokenHash,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshTokenHash);
 
-        var key = CreateKey(refreshTokenHash);
+        var key = CreateSessionKey(refreshTokenHash);
 
         var value = await _database.StringGetAsync(key);
 
@@ -59,64 +70,122 @@ public sealed class RedisRefreshTokenStore(
             return null;
         }
 
-        var serializedSession = value.ToString();
-
         return JsonSerializer.Deserialize<RefreshTokenSession>(
-            serializedSession,
+            value.ToString(),
             JsonSerializerOptions);
     }
 
-    public async Task DeleteAsync(
-        string refreshTokenHash,
+    public async Task UpdateAsync(
+        RefreshTokenSession session,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(refreshTokenHash);
+        ArgumentNullException.ThrowIfNull(session);
 
-        var key = CreateKey(refreshTokenHash);
-
-        await _database.KeyDeleteAsync(key);
-    }
-
-    public async Task UpdateAsync(
-    RefreshTokenSession session,
-    CancellationToken cancellationToken = default)
-    {
         await StoreAsync(
             session,
             cancellationToken);
     }
 
-    public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
-    Guid familyId,
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
+        Guid familyId,
+        CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<IReadOnlyCollection<RefreshTokenSession>>([]);
+        if (familyId == Guid.Empty)
+        {
+            return [];
+        }
+
+        var familyKey = CreateFamilyKey(familyId);
+
+        var refreshTokenHashes = await _database.SetMembersAsync(familyKey);
+
+        if (refreshTokenHashes.Length == 0)
+        {
+            return [];
+        }
+
+        var sessions = new List<RefreshTokenSession>();
+
+        foreach (var refreshTokenHash in refreshTokenHashes)
+        {
+            if (refreshTokenHash.IsNullOrEmpty)
+            {
+                continue;
+            }
+
+            var session = await GetByHashAsync(
+                refreshTokenHash.ToString(),
+                cancellationToken);
+
+            if (session is not null)
+            {
+                sessions.Add(session);
+            }
+        }
+
+        return sessions;
     }
 
-    public Task RevokeFamilyAsync(
+    public async Task RevokeFamilyAsync(
         Guid familyId,
         DateTimeOffset revokedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        if (familyId == Guid.Empty)
+        {
+            return;
+        }
+
+        var sessions = await GetByFamilyIdAsync(
+            familyId,
+            cancellationToken);
+
+        foreach (var session in sessions)
+        {
+            var revokedSession = session.Revoke(revokedAtUtc);
+
+            await UpdateAsync(
+                revokedSession,
+                cancellationToken);
+        }
+    }
+
+    private async Task ExtendFamilyKeyExpirationAsync(
+        RedisKey familyKey,
+        TimeSpan timeToLive)
+    {
+        var currentTimeToLive = await _database.KeyTimeToLiveAsync(familyKey);
+
+        if (currentTimeToLive is null || currentTimeToLive < timeToLive)
+        {
+            await _database.KeyExpireAsync(
+                familyKey,
+                timeToLive);
+        }
     }
 
     private TimeSpan CalculateTimeToLive(
         RefreshTokenSession session)
     {
-        var ttlFromSession = session.ExpiresAtUtc - session.IssuedAtUtc;
+        var timeToLive = session.ExpiresAtUtc - DateTimeOffset.UtcNow;
 
-        if (ttlFromSession > TimeSpan.Zero)
+        if (timeToLive > TimeSpan.Zero)
         {
-            return ttlFromSession;
+            return timeToLive;
         }
 
         return TimeSpan.FromMinutes(_refreshTokenOptions.ExpirationMinutes);
     }
 
-    private static string CreateKey(
+    private static string CreateSessionKey(
         string refreshTokenHash)
     {
-        return $"{KeyPrefix}{refreshTokenHash}";
+        return $"{SessionKeyPrefix}{refreshTokenHash}";
+    }
+
+    private static string CreateFamilyKey(
+        Guid familyId)
+    {
+        return $"{FamilyKeyPrefix}{familyId:N}";
     }
 }
