@@ -1,9 +1,11 @@
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
+using Gauss.Identity.Application.Abstractions.Provisioning;
 using Gauss.Identity.Application.Abstractions.Tenancy;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Infrastructure.Authentication;
 using Gauss.Identity.Infrastructure.Persistence;
+using Gauss.Identity.Infrastructure.Provisioning;
 using Gauss.Identity.Infrastructure.Tenancy;
 using Gauss.Identity.Infrastructure.Time;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +23,7 @@ public static class DependencyInjection
     {
         services.AddPersistence(configuration);
         services.AddTenancy();
+        services.AddProvisioning();
         services.AddAuthenticationServices(configuration);
         services.AddRefreshTokenServices(configuration);
         services.AddRedis(configuration);
@@ -117,6 +120,14 @@ public static class DependencyInjection
         this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddProvisioning(
+    this IServiceCollection services)
+    {
+        services.AddScoped<IRegistrationProvisioningService, SqlRegistrationProvisioningService>();
 
         return services;
     }
