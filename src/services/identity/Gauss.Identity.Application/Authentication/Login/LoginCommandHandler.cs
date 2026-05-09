@@ -56,8 +56,9 @@ public sealed class LoginCommandHandler(
 
         user.RegisterSuccessfulLogin(utcNow);
 
-        await userRepository.UpdateLastLoginAsync(
-            user,
+        await userRepository.RecordLoginAsync(
+            user.Id,
+            utcNow,
             cancellationToken);
 
         var accessToken = accessTokenProvider.Generate(user);

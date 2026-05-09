@@ -72,8 +72,9 @@ public sealed class LoginCommandHandlerTests
         passwordHasher.LastPasswordHash.Should().Be(user.PasswordHash);
         passwordHasher.LastProvidedPassword.Should().Be("StrongPassword@123");
 
-        userRepository.UpdatedUser.Should().Be(user);
         user.LastLoginAtUtc.Should().Be(dateTimeProvider.UtcNow);
+        userRepository.RecordedLoginUserId.Should().Be(user.Id);
+        userRepository.RecordedLoginAtUtc.Should().Be(dateTimeProvider.UtcNow);
 
         accessTokenProvider.LastUser.Should().Be(user);
 
@@ -160,7 +161,8 @@ public sealed class LoginCommandHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(LoginErrors.UserUnavailable);
-        userRepository.UpdatedUser.Should().BeNull();
+        userRepository.RecordedLoginUserId.Should().BeNull();
+        userRepository.RecordedLoginAtUtc.Should().BeNull();
     }
 
     [Fact(DisplayName = "Should return invalid credentials when email format is invalid")]
@@ -299,10 +301,10 @@ public sealed class LoginCommandHandlerTests
         result.Error.Should().Be(LoginErrors.UserUnavailable);
     }
 
-    [Fact(DisplayName = "Should update LastLoginAtUtc when login is successful")]
+    [Fact(DisplayName = "Should record LastLoginAtUtc when login is successful")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Update_LastLoginAtUtc_When_Login_Is_Successful()
+    public async Task Should_Record_LastLoginAtUtc_When_Login_Is_Successful()
     {
         // Arrange
         var user = CreateActiveUser();
@@ -329,7 +331,8 @@ public sealed class LoginCommandHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         user.LastLoginAtUtc.Should().Be(dateTimeProvider.UtcNow);
-        userRepository.UpdatedUser.Should().Be(user);
+        userRepository.RecordedLoginUserId.Should().Be(user.Id);
+        userRepository.RecordedLoginAtUtc.Should().Be(dateTimeProvider.UtcNow);
     }
 
     [Fact(DisplayName = "Should issue refresh token when login is successful")]
@@ -543,7 +546,9 @@ public sealed class LoginCommandHandlerTests
 
         public User? AddedUser { get; private set; }
 
-        public User? UpdatedUser { get; private set; }
+        public UserId? RecordedLoginUserId { get; private set; }
+
+        public DateTimeOffset? RecordedLoginAtUtc { get; private set; }
 
         public Task<bool> ExistsByEmailAsync(
             Email email,
@@ -570,11 +575,13 @@ public sealed class LoginCommandHandlerTests
             return Task.CompletedTask;
         }
 
-        public Task UpdateLastLoginAsync(
-            User user,
+        public Task RecordLoginAsync(
+            UserId userId,
+            DateTimeOffset loggedInAtUtc,
             CancellationToken cancellationToken = default)
         {
-            UpdatedUser = user;
+            RecordedLoginUserId = userId;
+            RecordedLoginAtUtc = loggedInAtUtc;
 
             return Task.CompletedTask;
         }
@@ -699,18 +706,6 @@ public sealed class LoginCommandHandlerTests
             StoredSession = session;
 
             return Task.CompletedTask;
-        }
-
-        public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
-            Guid familyId,
-            CancellationToken cancellationToken = default)
-        {
-            IReadOnlyCollection<RefreshTokenSession> sessions =
-                StoredSession is not null && StoredSession.FamilyId == familyId
-                    ? [StoredSession]
-                    : [];
-
-            return Task.FromResult(sessions);
         }
 
         public Task RevokeFamilyAsync(

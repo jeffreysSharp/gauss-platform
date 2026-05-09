@@ -165,10 +165,10 @@ public sealed class SqlUserRepositoryTests(
         user.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should update last login when user login succeeds")]
+    [Fact(DisplayName = "Should record last login when user login succeeds")]
     [Trait("Layer", "Infrastructure")]
     [Trait("Category", "Persistence")]
-    public async Task Should_Update_LastLoginAtUtc_When_User_Login_Succeeds()
+    public async Task Should_Record_LastLoginAtUtc_When_User_Login_Succeeds()
     {
         // Arrange
         var repository = CreateRepository();
@@ -187,10 +187,10 @@ public sealed class SqlUserRepositoryTests(
             0,
             TimeSpan.Zero);
 
-        user.RegisterSuccessfulLogin(loggedInAtUtc);
-
         // Act
-        await repository.UpdateLastLoginAsync(user);
+        await repository.RecordLoginAsync(
+            user.Id,
+            loggedInAtUtc);
 
         // Assert
         await using var connection = new SqlConnection(fixture.ConnectionString);

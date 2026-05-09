@@ -119,45 +119,45 @@ public sealed class SqlUserRepository(
     }
 
     public async Task AddAsync(
-    User user,
-    CancellationToken cancellationToken = default)
+        User user,
+        CancellationToken cancellationToken = default)
     {
         const string sql = """
-        INSERT INTO [identity].[Users]
-        (
-            [Id],
-            [TenantId],
-            [Name],
-            [Email],
-            [NormalizedEmail],
-            [PasswordHash],
-            [Status],
-            [RegisteredAtUtc],
-            [EmailConfirmedAtUtc],
-            [LastLoginAtUtc],
-            [LockedUntilUtc],
-            [CreatedAtUtc],
-            [UpdatedAtUtc],
-            [IsDeleted]
-        )
-        VALUES
-        (
-            @Id,
-            @TenantId,
-            @Name,
-            @Email,
-            @NormalizedEmail,
-            @PasswordHash,
-            @Status,
-            @RegisteredAtUtc,
-            @EmailConfirmedAtUtc,
-            @LastLoginAtUtc,
-            @LockedUntilUtc,
-            @CreatedAtUtc,
-            NULL,
-            0
-        );
-        """;
+            INSERT INTO [identity].[Users]
+            (
+                [Id],
+                [TenantId],
+                [Name],
+                [Email],
+                [NormalizedEmail],
+                [PasswordHash],
+                [Status],
+                [RegisteredAtUtc],
+                [EmailConfirmedAtUtc],
+                [LastLoginAtUtc],
+                [LockedUntilUtc],
+                [CreatedAtUtc],
+                [UpdatedAtUtc],
+                [IsDeleted]
+            )
+            VALUES
+            (
+                @Id,
+                @TenantId,
+                @Name,
+                @Email,
+                @NormalizedEmail,
+                @PasswordHash,
+                @Status,
+                @RegisteredAtUtc,
+                @EmailConfirmedAtUtc,
+                @LastLoginAtUtc,
+                @LockedUntilUtc,
+                @CreatedAtUtc,
+                NULL,
+                0
+            );
+            """;
 
         await using var connection = connectionFactory.CreateConnection();
 
@@ -183,16 +183,17 @@ public sealed class SqlUserRepository(
         await connection.ExecuteAsync(command);
     }
 
-    public async Task UpdateLastLoginAsync(
-        User user,
+    public async Task RecordLoginAsync(
+        UserId userId,
+        DateTimeOffset loggedInAtUtc,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
             UPDATE [identity].[Users]
             SET
-                [LastLoginAtUtc] = @LastLoginAtUtc,
-                [UpdatedAtUtc] = @UpdatedAtUtc
-            WHERE [Id] = @Id
+                [LastLoginAtUtc] = @LoggedInAtUtc,
+                [UpdatedAtUtc] = @LoggedInAtUtc
+            WHERE [Id] = @UserId
               AND [IsDeleted] = 0;
             """;
 
@@ -202,9 +203,8 @@ public sealed class SqlUserRepository(
             sql,
             new
             {
-                Id = user.Id.Value,
-                user.LastLoginAtUtc,
-                UpdatedAtUtc = user.LastLoginAtUtc
+                UserId = userId.Value,
+                LoggedInAtUtc = loggedInAtUtc
             },
             cancellationToken: cancellationToken);
 
