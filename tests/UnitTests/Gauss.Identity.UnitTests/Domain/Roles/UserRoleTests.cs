@@ -1,6 +1,6 @@
 using AwesomeAssertions;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Domain.Roles;
-using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 
 namespace Gauss.Identity.UnitTests.Domain.Roles;

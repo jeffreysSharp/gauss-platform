@@ -1,8 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using AwesomeAssertions;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Application.Abstractions.Time;
-using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 using Gauss.Identity.Infrastructure.Authentication;

@@ -1,7 +1,7 @@
 using Dapper;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Application.Abstractions.Provisioning;
 using Gauss.Identity.Domain.Roles;
-using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Infrastructure.Persistence;
 

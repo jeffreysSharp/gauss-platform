@@ -2,8 +2,6 @@ namespace Gauss.BuildingBlocks.Domain.ValueObjects;
 
 public abstract class ValueObject
 {
-    protected abstract IEnumerable<object?> GetEqualityComponents();
-
     public override bool Equals(object? obj)
     {
         if (obj is null || obj.GetType() != GetType())
@@ -24,4 +22,6 @@ public abstract class ValueObject
                 HashCode.Combine(GetType()),
                 HashCode.Combine);
     }
+
+    protected abstract IEnumerable<object?> GetEqualityComponents();
 }

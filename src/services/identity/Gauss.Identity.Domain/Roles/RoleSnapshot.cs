@@ -1,5 +1,5 @@
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Domain.Roles.ValueObjects;
-using Gauss.Identity.Domain.Tenants;
 
 namespace Gauss.Identity.Domain.Roles;
 

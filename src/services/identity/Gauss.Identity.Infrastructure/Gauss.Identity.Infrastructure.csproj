@@ -19,8 +19,4 @@
     <ProjectReference Include="..\Gauss.Identity.Domain\Gauss.Identity.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Tenancy\" />
-  </ItemGroup>
-
 </Project>
