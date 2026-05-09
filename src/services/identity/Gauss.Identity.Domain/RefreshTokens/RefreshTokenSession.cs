@@ -13,6 +13,39 @@ public sealed record RefreshTokenSession(
     Guid? ReplacedBySessionId = null,
     DateTimeOffset? ReuseDetectedAtUtc = null)
 {
+    public static RefreshTokenSession CreateNewFamily(
+        Guid userId,
+        Guid tenantId,
+        string refreshTokenHash,
+        DateTimeOffset issuedAtUtc,
+        DateTimeOffset expiresAtUtc)
+    {
+        return Create(
+            Guid.NewGuid(),
+            userId,
+            tenantId,
+            refreshTokenHash,
+            issuedAtUtc,
+            expiresAtUtc);
+    }
+
+    public static RefreshTokenSession CreateFromExistingFamily(
+        Guid familyId,
+        Guid userId,
+        Guid tenantId,
+        string refreshTokenHash,
+        DateTimeOffset issuedAtUtc,
+        DateTimeOffset expiresAtUtc)
+    {
+        return Create(
+            familyId,
+            userId,
+            tenantId,
+            refreshTokenHash,
+            issuedAtUtc,
+            expiresAtUtc);
+    }
+
     public bool IsExpired(DateTimeOffset utcNow)
     {
         return ExpiresAtUtc <= utcNow;
@@ -64,5 +97,23 @@ public sealed record RefreshTokenSession(
             ReuseDetectedAtUtc = reuseDetectedAtUtc,
             RevokedAtUtc = RevokedAtUtc ?? reuseDetectedAtUtc
         };
+    }
+
+    private static RefreshTokenSession Create(
+        Guid familyId,
+        Guid userId,
+        Guid tenantId,
+        string refreshTokenHash,
+        DateTimeOffset issuedAtUtc,
+        DateTimeOffset expiresAtUtc)
+    {
+        return new RefreshTokenSession(
+            SessionId: Guid.NewGuid(),
+            FamilyId: familyId,
+            UserId: userId,
+            TenantId: tenantId,
+            RefreshTokenHash: refreshTokenHash,
+            IssuedAtUtc: issuedAtUtc,
+            ExpiresAtUtc: expiresAtUtc);
     }
 }

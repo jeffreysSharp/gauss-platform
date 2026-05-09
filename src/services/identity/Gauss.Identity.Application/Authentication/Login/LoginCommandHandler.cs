@@ -78,14 +78,12 @@ public sealed class LoginCommandHandler(
 
         var refreshTokenHash = refreshTokenHasher.Hash(refreshToken.Value);
 
-        var refreshTokenSession = new RefreshTokenSession(
-            SessionId: Guid.NewGuid(),
-            FamilyId: Guid.NewGuid(),
-            UserId: user.Id.Value,
-            TenantId: user.TenantId.Value,
-            RefreshTokenHash: refreshTokenHash,
-            IssuedAtUtc: utcNow,
-            ExpiresAtUtc: refreshToken.ExpiresAtUtc);
+        var refreshTokenSession = RefreshTokenSession.CreateNewFamily(
+            user.Id.Value,
+            user.TenantId.Value,
+            refreshTokenHash,
+            utcNow,
+            refreshToken.ExpiresAtUtc);
 
         await refreshTokenStore.StoreAsync(
             refreshTokenSession,
