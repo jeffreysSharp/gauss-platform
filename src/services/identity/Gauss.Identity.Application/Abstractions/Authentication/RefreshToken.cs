@@ -1,4 +1,4 @@
-namespace Gauss.Identity.Application.Authentication.RefreshTokens;
+namespace Gauss.Identity.Application.Abstractions.Authentication;
 
 public sealed record RefreshToken(
     string Value,

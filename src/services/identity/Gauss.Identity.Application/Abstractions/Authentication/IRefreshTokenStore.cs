@@ -17,10 +17,6 @@ public interface IRefreshTokenStore
         RefreshTokenSession session,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
-        Guid familyId,
-        CancellationToken cancellationToken = default);
-
     Task RevokeFamilyAsync(
         Guid familyId,
         DateTimeOffset revokedAtUtc,

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Gauss.Identity.Application.Abstractions.Authentication;
-using Gauss.Identity.Application.Authentication.RefreshTokens;
 using Microsoft.Extensions.Options;
 
 namespace Gauss.Identity.Infrastructure.Authentication;

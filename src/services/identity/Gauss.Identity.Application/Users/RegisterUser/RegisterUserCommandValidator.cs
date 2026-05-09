@@ -1,4 +1,5 @@
 using FluentValidation;
+using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Application.Users.RegisterUser;
 
@@ -13,12 +14,13 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .WithErrorCode("Identity.User.NameTooLong");
 
         RuleFor(command => command.Email)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
             .WithErrorCode("Identity.User.EmailRequired")
-            .EmailAddress()
-            .WithErrorCode("Identity.User.EmailInvalid")
-            .MaximumLength(254)
-            .WithErrorCode("Identity.User.EmailTooLong");
+            .MaximumLength(Email.MaxLength)
+            .WithErrorCode("Identity.User.EmailTooLong")
+            .Must(email => Email.TryCreate(email, out _))
+            .WithErrorCode("Identity.User.EmailInvalid");
 
         RuleFor(command => command.Password)
             .NotEmpty()

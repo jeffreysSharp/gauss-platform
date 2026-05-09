@@ -444,19 +444,34 @@ public sealed class RefreshTokenCommandHandlerTests
     {
         public User? User { get; init; }
 
+        public Email? LastEmailChecked { get; private set; }
+
         public UserId? LastUserIdChecked { get; private set; }
+
+        public User? AddedUser { get; private set; }
+
+        public Task UpdatePasswordHashAsync(
+            UserId userId,
+            PasswordHash passwordHash,
+            DateTimeOffset updatedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
 
         public Task<bool> ExistsByEmailAsync(
             Email email,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(false);
+            return Task.FromResult(User is not null && User.Email == email);
         }
 
         public Task<User?> GetByEmailAsync(
             Email email,
             CancellationToken cancellationToken = default)
         {
+            LastEmailChecked = email;
+
             return Task.FromResult(User);
         }
 
@@ -473,11 +488,14 @@ public sealed class RefreshTokenCommandHandlerTests
             User user,
             CancellationToken cancellationToken = default)
         {
+            AddedUser = user;
+
             return Task.CompletedTask;
         }
 
-        public Task UpdateLastLoginAsync(
-            User user,
+        public Task RecordLoginAsync(
+            UserId userId,
+            DateTimeOffset loggedInAtUtc,
             CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
@@ -544,7 +562,7 @@ public sealed class RefreshTokenCommandHandlerTests
 
     private sealed class FakeRefreshTokenStore : IRefreshTokenStore
     {
-        public RefreshTokenSession? Session { get; set; }
+        public RefreshTokenSession? Session { get; init; }
 
         public string? LastHashChecked { get; private set; }
 
@@ -583,30 +601,6 @@ public sealed class RefreshTokenCommandHandlerTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyCollection<RefreshTokenSession>> GetByFamilyIdAsync(
-            Guid familyId,
-            CancellationToken cancellationToken = default)
-        {
-            var sessions = new List<RefreshTokenSession>();
-
-            if (Session is not null && Session.FamilyId == familyId)
-            {
-                sessions.Add(Session);
-            }
-
-            if (StoredSession is not null && StoredSession.FamilyId == familyId)
-            {
-                sessions.Add(StoredSession);
-            }
-
-            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
-            {
-                sessions.Add(UpdatedSession);
-            }
-
-            return Task.FromResult<IReadOnlyCollection<RefreshTokenSession>>(sessions);
-        }
-
         public Task RevokeFamilyAsync(
             Guid familyId,
             DateTimeOffset revokedAtUtc,
@@ -614,21 +608,6 @@ public sealed class RefreshTokenCommandHandlerTests
         {
             RevokedFamilyId = familyId;
             RevokedAtUtc = revokedAtUtc;
-
-            if (Session is not null && Session.FamilyId == familyId)
-            {
-                Session = Session.Revoke(revokedAtUtc);
-            }
-
-            if (StoredSession is not null && StoredSession.FamilyId == familyId)
-            {
-                StoredSession = StoredSession.Revoke(revokedAtUtc);
-            }
-
-            if (UpdatedSession is not null && UpdatedSession.FamilyId == familyId)
-            {
-                UpdatedSession = UpdatedSession.Revoke(revokedAtUtc);
-            }
 
             return Task.CompletedTask;
         }

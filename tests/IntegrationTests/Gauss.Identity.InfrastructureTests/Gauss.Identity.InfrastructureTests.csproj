@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Fixtures\**" />
+    <EmbeddedResource Remove="Fixtures\**" />
+    <None Remove="Fixtures\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AwesomeAssertions" Version="9.4.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Dapper" Version="2.1.72" />
@@ -28,10 +34,6 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Fixtures\" />
   </ItemGroup>
 
 </Project>

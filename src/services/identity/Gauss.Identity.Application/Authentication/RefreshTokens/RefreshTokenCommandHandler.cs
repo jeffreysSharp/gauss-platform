@@ -21,8 +21,6 @@ public sealed class RefreshTokenCommandHandler(
         RefreshTokenCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         var utcNow = dateTimeProvider.UtcNow;
 
         var refreshTokenHash = refreshTokenHasher.Hash(command.RefreshToken);
@@ -85,14 +83,13 @@ public sealed class RefreshTokenCommandHandler(
         var newRefreshTokenHash = refreshTokenHasher.Hash(
             newRefreshToken.Value);
 
-        var newSession = new RefreshTokenSession(
-            SessionId: Guid.NewGuid(),
-            FamilyId: currentSession.FamilyId,
-            UserId: user.Id.Value,
-            TenantId: user.TenantId.Value,
-            RefreshTokenHash: newRefreshTokenHash,
-            IssuedAtUtc: utcNow,
-            ExpiresAtUtc: newRefreshToken.ExpiresAtUtc);
+        var newSession = RefreshTokenSession.CreateFromExistingFamily(
+            currentSession.FamilyId,
+            user.Id.Value,
+            user.TenantId.Value,
+            newRefreshTokenHash,
+            utcNow,
+            newRefreshToken.ExpiresAtUtc);
 
         await refreshTokenStore.StoreAsync(
             newSession,

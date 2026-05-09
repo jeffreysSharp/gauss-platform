@@ -27,15 +27,7 @@ public sealed class RegisterUserCommandHandler(
         RegisterUserCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
-        Email email;
-
-        try
-        {
-            email = Email.Create(command.Email);
-        }
-        catch (ArgumentException)
+        if (!Email.TryCreate(command.Email, out var email))
         {
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidEmail);
         }
@@ -97,7 +89,7 @@ public sealed class RegisterUserCommandHandler(
         Role role,
         CancellationToken cancellationToken)
     {
-        foreach (var permissionCode in GetBaselinePermissionCodes())
+        foreach (var permissionCode in TenantAdministratorPolicy.BaselinePermissions)
         {
             var permission = await permissionRepository.GetByCodeAsync(
                 PermissionCode.Create(permissionCode),
@@ -108,19 +100,5 @@ public sealed class RegisterUserCommandHandler(
                 role.GrantPermission(permission);
             }
         }
-    }
-
-    private static IReadOnlyCollection<string> GetBaselinePermissionCodes()
-    {
-        return
-        [
-            IdentityPermissions.UsersRead,
-            IdentityPermissions.UsersManage,
-            IdentityPermissions.RolesRead,
-            IdentityPermissions.RolesManage,
-            IdentityPermissions.PermissionsRead,
-            IdentityPermissions.TenantRead,
-            IdentityPermissions.TenantManage
-        ];
     }
 }

@@ -150,27 +150,62 @@ public sealed class RegisterUserCommandHandlerTests
     private sealed class FakeUserRepository : IUserRepository
     {
         public bool EmailAlreadyExists { get; init; }
+
+        public User? User { get; init; }
+
+        public Email? LastEmailChecked { get; private set; }
+
         public User? AddedUser { get; private set; }
 
-        public Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default)
+        public Task UpdatePasswordHashAsync(
+            UserId userId,
+            PasswordHash passwordHash,
+            DateTimeOffset updatedAtUtc,
+            CancellationToken cancellationToken = default)
         {
+            return Task.CompletedTask;
+        }
+        public Task<bool> ExistsByEmailAsync(
+            Email email,
+            CancellationToken cancellationToken = default)
+        {
+            LastEmailChecked = email;
+
             return Task.FromResult(EmailAlreadyExists);
         }
 
-        public Task AddAsync(User user, CancellationToken cancellationToken = default)
+        public Task<User?> GetByEmailAsync(
+            Email email,
+            CancellationToken cancellationToken = default)
+        {
+            LastEmailChecked = email;
+
+            return Task.FromResult(User);
+        }
+
+        public Task<User?> GetByIdAsync(
+            UserId userId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(User);
+        }
+
+        public Task AddAsync(
+            User user,
+            CancellationToken cancellationToken = default)
         {
             AddedUser = user;
+
             return Task.CompletedTask;
         }
 
-        public Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
-            => Task.FromResult<User?>(null);
-
-        public Task<User?> GetByIdAsync(UserId userId, CancellationToken cancellationToken = default)
-            => Task.FromResult<User?>(null);
-
-        public Task UpdateLastLoginAsync(User user, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        public Task RecordLoginAsync(
+            UserId userId,
+            DateTimeOffset loggedInAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher
