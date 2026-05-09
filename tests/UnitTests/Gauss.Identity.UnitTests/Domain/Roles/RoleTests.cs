@@ -1,7 +1,7 @@
 using AwesomeAssertions;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Domain.Roles;
 using Gauss.Identity.Domain.Roles.ValueObjects;
-using Gauss.Identity.Domain.Tenants;
 
 namespace Gauss.Identity.UnitTests.Domain.Roles;
 

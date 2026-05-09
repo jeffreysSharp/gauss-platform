@@ -1,4 +1,4 @@
-using Gauss.Identity.Domain.Tenants;
+using Gauss.BuildingBlocks.Domain.Tenants;
 
 namespace Gauss.Identity.Application.Abstractions.Tenancy;
 
