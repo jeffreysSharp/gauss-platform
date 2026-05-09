@@ -6,6 +6,8 @@ namespace Gauss.Identity.Domain.Users.ValueObjects;
 
 public sealed partial class Email : ValueObject
 {
+    public const int MaxLength = 254;
+
     private Email(string value)
     {
         Value = value;
@@ -35,6 +37,11 @@ public sealed partial class Email : ValueObject
         }
 
         var normalizedEmail = Normalize(value);
+
+        if (normalizedEmail.Length > MaxLength)
+        {
+            return false;
+        }
 
         if (!EmailRegex().IsMatch(normalizedEmail))
         {
