@@ -24,15 +24,9 @@ public sealed class LoginCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        Email email;
-
-        try
+        if (!Email.TryCreate(command.Email, out var email))
         {
-            email = Email.Create(command.Email);
-        }
-        catch (ArgumentException)
-        {
-            return Result<LoginResponse>.Failure(LoginErrors.InvalidEmail);
+            return Result<LoginResponse>.Failure(LoginErrors.InvalidCredentials);
         }
 
         var user = await userRepository.GetByEmailAsync(

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Gauss.BuildingBlocks.Domain.ValueObjects;
 
@@ -14,16 +15,35 @@ public sealed partial class Email : ValueObject
 
     public static Email Create(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
-        var normalizedEmail = value.Trim().ToLowerInvariant();
-
-        if (!EmailRegex().IsMatch(normalizedEmail))
+        if (!TryCreate(value, out var email))
         {
             throw new ArgumentException("Invalid email format.", nameof(value));
         }
 
-        return new Email(normalizedEmail);
+        return email;
+    }
+
+    public static bool TryCreate(
+        string? value,
+        [NotNullWhen(true)] out Email? email)
+    {
+        email = null;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalizedEmail = Normalize(value);
+
+        if (!EmailRegex().IsMatch(normalizedEmail))
+        {
+            return false;
+        }
+
+        email = new Email(normalizedEmail);
+
+        return true;
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()
@@ -34,6 +54,11 @@ public sealed partial class Email : ValueObject
     public override string ToString()
     {
         return Value;
+    }
+
+    private static string Normalize(string value)
+    {
+        return value.Trim().ToLowerInvariant();
     }
 
     [GeneratedRegex(

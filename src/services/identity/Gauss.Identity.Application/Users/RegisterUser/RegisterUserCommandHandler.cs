@@ -29,13 +29,7 @@ public sealed class RegisterUserCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        Email email;
-
-        try
-        {
-            email = Email.Create(command.Email);
-        }
-        catch (ArgumentException)
+        if (!Email.TryCreate(command.Email, out var email))
         {
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidEmail);
         }

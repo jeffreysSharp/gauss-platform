@@ -163,10 +163,10 @@ public sealed class LoginCommandHandlerTests
         userRepository.UpdatedUser.Should().BeNull();
     }
 
-    [Fact(DisplayName = "Should return invalid email when email format is invalid")]
+    [Fact(DisplayName = "Should return invalid credentials when email format is invalid")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
-    public async Task Should_Return_InvalidEmail_When_Email_Format_Is_Invalid()
+    public async Task Should_Return_InvalidCredentials_When_Email_Format_Is_Invalid()
     {
         // Arrange
         var handler = CreateHandler();
@@ -180,7 +180,7 @@ public sealed class LoginCommandHandlerTests
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(LoginErrors.InvalidEmail);
+        result.Error.Should().Be(LoginErrors.InvalidCredentials);
     }
 
     [Fact(DisplayName = "Should return user unavailable when user is suspended")]
