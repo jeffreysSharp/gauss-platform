@@ -450,6 +450,15 @@ public sealed class RefreshTokenCommandHandlerTests
 
         public User? AddedUser { get; private set; }
 
+        public Task UpdatePasswordHashAsync(
+            UserId userId,
+            PasswordHash passwordHash,
+            DateTimeOffset updatedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task<bool> ExistsByEmailAsync(
             Email email,
             CancellationToken cancellationToken = default)

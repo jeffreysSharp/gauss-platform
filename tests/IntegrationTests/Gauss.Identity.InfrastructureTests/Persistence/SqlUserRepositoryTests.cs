@@ -252,6 +252,63 @@ public sealed class SqlUserRepositoryTests(
         passwordHash.Should().Be("hashed-password-value");
     }
 
+    [Fact(DisplayName = "Should update password hash when rehash is needed")]
+    [Trait("Layer", "Infrastructure")]
+    [Trait("Category", "Persistence")]
+    public async Task Should_Update_PasswordHash_When_Rehash_Is_Needed()
+    {
+        // Arrange
+        var repository = CreateRepository();
+
+        var user = CreateUser();
+
+        await AddTenantAsync(user.TenantId);
+        await repository.AddAsync(user);
+
+        var updatedPasswordHash = PasswordHash.Create("updated-password-hash-value");
+
+        var updatedAtUtc = new DateTimeOffset(
+            2026,
+            04,
+            30,
+            13,
+            30,
+            0,
+            TimeSpan.Zero);
+
+        // Act
+        await repository.UpdatePasswordHashAsync(
+            user.Id,
+            updatedPasswordHash,
+            updatedAtUtc);
+
+        // Assert
+        await using var connection = new SqlConnection(fixture.ConnectionString);
+
+        const string sql = """
+        SELECT
+            [PasswordHash],
+            [UpdatedAtUtc]
+        FROM [identity].[Users]
+        WHERE [Id] = @UserId
+          AND [IsDeleted] = 0;
+        """;
+
+        var persistedUser = await connection.QuerySingleAsync<UserPasswordHashRecord>(
+            sql,
+            new
+            {
+                UserId = user.Id.Value
+            });
+
+        persistedUser.PasswordHash.Should().Be(updatedPasswordHash.Value);
+        persistedUser.UpdatedAtUtc.Should().Be(updatedAtUtc);
+    }
+
+    private sealed record UserPasswordHashRecord(
+        string PasswordHash,
+        DateTimeOffset? UpdatedAtUtc);
+
     private async Task AddTenantAsync(TenantId tenantId)
     {
         await using var connection = new SqlConnection(fixture.ConnectionString);

@@ -211,6 +211,36 @@ public sealed class SqlUserRepository(
         await connection.ExecuteAsync(command);
     }
 
+    public async Task UpdatePasswordHashAsync(
+        UserId userId,
+        PasswordHash passwordHash,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE [identity].[Users]
+            SET
+                [PasswordHash] = @PasswordHash,
+                [UpdatedAtUtc] = @UpdatedAtUtc
+            WHERE [Id] = @UserId
+              AND [IsDeleted] = 0;
+            """;
+
+        await using var connection = connectionFactory.CreateConnection();
+
+        var command = new CommandDefinition(
+            sql,
+            new
+            {
+                UserId = userId.Value,
+                PasswordHash = passwordHash.Value,
+                UpdatedAtUtc = updatedAtUtc
+            },
+            cancellationToken: cancellationToken);
+
+        await connection.ExecuteAsync(command);
+    }
+
     private static User MapToUser(
         UserPersistenceRecord record)
     {

@@ -90,6 +90,46 @@ public sealed class LoginCommandHandlerTests
         refreshTokenStore.StoredSession.ExpiresAtUtc.Should().Be(refreshTokenGenerator.RefreshToken.ExpiresAtUtc);
     }
 
+    [Fact(DisplayName = "Should update password hash when rehash is needed")]
+    [Trait("Layer", "Application")]
+    [Trait("Category", "UseCases")]
+    public async Task Should_Update_PasswordHash_When_Rehash_Is_Needed()
+    {
+        // Arrange
+        var user = CreateActiveUser();
+
+        var userRepository = new FakeUserRepository
+        {
+            User = user
+        };
+
+        var passwordHasher = new FakePasswordHasher
+        {
+            VerificationStatus = PasswordVerificationStatus.SuccessRehashNeeded
+        };
+
+        var dateTimeProvider = new FakeDateTimeProvider();
+
+        var handler = CreateHandler(
+            userRepository: userRepository,
+            passwordHasher: passwordHasher,
+            dateTimeProvider: dateTimeProvider);
+
+        var command = new LoginCommand(
+            "jeferson@gauss.com",
+            "StrongPassword@123");
+
+        // Act
+        var result = await handler.HandleAsync(command);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        userRepository.UpdatedPasswordHashUserId.Should().Be(user.Id);
+        userRepository.UpdatedPasswordHash.Should().Be(PasswordHash.Create("hashed-StrongPassword@123"));
+        userRepository.PasswordHashUpdatedAtUtc.Should().Be(dateTimeProvider.UtcNow);
+    }
+
     [Fact(DisplayName = "Should return invalid credentials when user does not exist")]
     [Trait("Layer", "Application")]
     [Trait("Category", "UseCases")]
@@ -549,6 +589,25 @@ public sealed class LoginCommandHandlerTests
         public UserId? RecordedLoginUserId { get; private set; }
 
         public DateTimeOffset? RecordedLoginAtUtc { get; private set; }
+
+        public UserId? UpdatedPasswordHashUserId { get; private set; }
+
+        public PasswordHash? UpdatedPasswordHash { get; private set; }
+
+        public DateTimeOffset? PasswordHashUpdatedAtUtc { get; private set; }
+
+        public Task UpdatePasswordHashAsync(
+            UserId userId,
+            PasswordHash passwordHash,
+            DateTimeOffset updatedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            UpdatedPasswordHashUserId = userId;
+            UpdatedPasswordHash = passwordHash;
+            PasswordHashUpdatedAtUtc = updatedAtUtc;
+
+            return Task.CompletedTask;
+        }
 
         public Task<bool> ExistsByEmailAsync(
             Email email,

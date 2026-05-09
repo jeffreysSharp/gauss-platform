@@ -54,6 +54,17 @@ public sealed class LoginCommandHandler(
             return Result<LoginResponse>.Failure(LoginErrors.UserUnavailable);
         }
 
+        if (passwordVerificationStatus == PasswordVerificationStatus.SuccessRehashNeeded)
+        {
+            var updatedPasswordHash = passwordHasher.Hash(command.Password);
+
+            await userRepository.UpdatePasswordHashAsync(
+                user.Id,
+                updatedPasswordHash,
+                utcNow,
+                cancellationToken);
+        }
+
         user.RegisterSuccessfulLogin(utcNow);
 
         await userRepository.RecordLoginAsync(
