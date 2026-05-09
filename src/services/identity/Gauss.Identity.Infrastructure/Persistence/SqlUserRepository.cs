@@ -1,6 +1,6 @@
 using Dapper;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Application.Abstractions.Persistence;
-using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 

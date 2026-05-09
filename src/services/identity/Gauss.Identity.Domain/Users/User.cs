@@ -1,5 +1,5 @@
 using Gauss.BuildingBlocks.Domain.Entities;
-using Gauss.Identity.Domain.Tenants;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Domain.Users.Events;
 using Gauss.Identity.Domain.Users.ValueObjects;
 

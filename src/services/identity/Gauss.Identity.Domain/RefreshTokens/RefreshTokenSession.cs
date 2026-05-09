@@ -1,4 +1,4 @@
-namespace Gauss.Identity.Application.Authentication.RefreshTokens;
+namespace Gauss.Identity.Domain.RefreshTokens;
 
 public sealed record RefreshTokenSession(
     Guid SessionId,

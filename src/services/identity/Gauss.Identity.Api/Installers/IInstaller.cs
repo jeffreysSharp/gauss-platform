@@ -2,7 +2,7 @@ namespace Gauss.Identity.Api.Installers;
 
 public interface IInstaller
 {
-    int Order => 0;
+    int Order { get; }
 
     void InstallServices(
         IServiceCollection services,

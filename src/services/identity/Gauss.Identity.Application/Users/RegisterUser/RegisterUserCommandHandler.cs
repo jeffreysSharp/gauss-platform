@@ -1,5 +1,6 @@
 using Gauss.BuildingBlocks.Application.Abstractions.Messaging;
 using Gauss.BuildingBlocks.Application.Abstractions.Results;
+using Gauss.BuildingBlocks.Domain.Tenants;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Provisioning;
@@ -7,7 +8,6 @@ using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Authorization;
 using Gauss.Identity.Domain.Roles;
 using Gauss.Identity.Domain.Roles.ValueObjects;
-using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;
 

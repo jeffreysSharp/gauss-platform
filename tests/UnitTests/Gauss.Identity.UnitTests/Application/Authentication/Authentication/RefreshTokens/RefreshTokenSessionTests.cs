@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 
 namespace Gauss.Identity.UnitTests.Application.Authentication.Authentication.RefreshTokens;
 

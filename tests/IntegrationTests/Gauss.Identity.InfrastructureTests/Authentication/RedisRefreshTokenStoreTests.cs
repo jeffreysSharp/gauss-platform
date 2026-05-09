@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 using Gauss.Identity.Infrastructure.Authentication;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
