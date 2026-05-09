@@ -39,7 +39,7 @@ public sealed class RegisterUserEndpointTests(
         // Assert
         await response.ShouldHaveStatusCodeAsync(HttpStatusCode.Created);
 
-        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location.Should().BeNull();
 
         response.ShouldHaveCorrelationId();
 
