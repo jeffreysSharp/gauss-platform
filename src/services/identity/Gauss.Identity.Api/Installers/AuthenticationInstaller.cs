@@ -8,6 +8,8 @@ namespace Gauss.Identity.Api.Installers;
 
 public sealed class AuthenticationInstaller : IInstaller
 {
+    public int Order => InstallerOrder.Authentication;
+
     public void InstallServices(
         IServiceCollection services,
         IConfiguration configuration)

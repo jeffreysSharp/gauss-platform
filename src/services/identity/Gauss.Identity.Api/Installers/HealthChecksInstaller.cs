@@ -4,6 +4,7 @@ namespace Gauss.Identity.Api.Installers;
 
 public sealed class HealthChecksInstaller : IInstaller
 {
+    public int Order => InstallerOrder.HealthChecks;
     public void InstallServices(
         IServiceCollection services,
         IConfiguration configuration)
