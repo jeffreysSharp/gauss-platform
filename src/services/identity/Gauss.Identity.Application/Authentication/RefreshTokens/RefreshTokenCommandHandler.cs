@@ -21,8 +21,6 @@ public sealed class RefreshTokenCommandHandler(
         RefreshTokenCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         var utcNow = dateTimeProvider.UtcNow;
 
         var refreshTokenHash = refreshTokenHasher.Hash(command.RefreshToken);

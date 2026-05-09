@@ -22,8 +22,6 @@ public sealed class LoginCommandHandler(
         LoginCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         if (!Email.TryCreate(command.Email, out var email))
         {
             return Result<LoginResponse>.Failure(LoginErrors.InvalidCredentials);

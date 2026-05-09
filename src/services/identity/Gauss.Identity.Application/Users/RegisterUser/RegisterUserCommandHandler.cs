@@ -27,8 +27,6 @@ public sealed class RegisterUserCommandHandler(
         RegisterUserCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         if (!Email.TryCreate(command.Email, out var email))
         {
             return Result<RegisterUserResponse>.Failure(RegisterUserErrors.InvalidEmail);
