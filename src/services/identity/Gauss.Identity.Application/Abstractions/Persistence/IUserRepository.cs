@@ -21,7 +21,14 @@ public interface IUserRepository
         User user,
         CancellationToken cancellationToken = default);
 
-    Task UpdateLastLoginAsync(
-        User user,
+    Task RecordLoginAsync(
+        UserId userId,
+        DateTimeOffset loggedInAtUtc,
+        CancellationToken cancellationToken = default);
+
+    Task UpdatePasswordHashAsync(
+        UserId userId,
+        PasswordHash passwordHash,
+        DateTimeOffset updatedAtUtc,
         CancellationToken cancellationToken = default);
 }

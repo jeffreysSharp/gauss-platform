@@ -22,17 +22,9 @@ public sealed class LoginCommandHandler(
         LoginCommand command,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
-        Email email;
-
-        try
+        if (!Email.TryCreate(command.Email, out var email))
         {
-            email = Email.Create(command.Email);
-        }
-        catch (ArgumentException)
-        {
-            return Result<LoginResponse>.Failure(LoginErrors.InvalidEmail);
+            return Result<LoginResponse>.Failure(LoginErrors.InvalidCredentials);
         }
 
         var user = await userRepository.GetByEmailAsync(
@@ -60,10 +52,22 @@ public sealed class LoginCommandHandler(
             return Result<LoginResponse>.Failure(LoginErrors.UserUnavailable);
         }
 
+        if (passwordVerificationStatus == PasswordVerificationStatus.SuccessRehashNeeded)
+        {
+            var updatedPasswordHash = passwordHasher.Hash(command.Password);
+
+            await userRepository.UpdatePasswordHashAsync(
+                user.Id,
+                updatedPasswordHash,
+                utcNow,
+                cancellationToken);
+        }
+
         user.RegisterSuccessfulLogin(utcNow);
 
-        await userRepository.UpdateLastLoginAsync(
-            user,
+        await userRepository.RecordLoginAsync(
+            user.Id,
+            utcNow,
             cancellationToken);
 
         var accessToken = accessTokenProvider.Generate(user);
@@ -72,14 +76,12 @@ public sealed class LoginCommandHandler(
 
         var refreshTokenHash = refreshTokenHasher.Hash(refreshToken.Value);
 
-        var refreshTokenSession = new RefreshTokenSession(
-            SessionId: Guid.NewGuid(),
-            FamilyId: Guid.NewGuid(),
-            UserId: user.Id.Value,
-            TenantId: user.TenantId.Value,
-            RefreshTokenHash: refreshTokenHash,
-            IssuedAtUtc: utcNow,
-            ExpiresAtUtc: refreshToken.ExpiresAtUtc);
+        var refreshTokenSession = RefreshTokenSession.CreateNewFamily(
+            user.Id.Value,
+            user.TenantId.Value,
+            refreshTokenHash,
+            utcNow,
+            refreshToken.ExpiresAtUtc);
 
         await refreshTokenStore.StoreAsync(
             refreshTokenSession,
