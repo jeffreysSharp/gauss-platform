@@ -12,6 +12,8 @@ builder.Services.InstallServices(
 
 var app = builder.Build();
 
+app.UseGaussExceptionHandling();
+
 app.UseGaussCorrelationId();
 
 app.MapGaussOpenApi();
@@ -26,4 +28,9 @@ app.MapIdentityEndpoints();
 
 await app.RunAsync();
 
-public partial class Program;
+public partial class Program
+{
+    protected Program()
+    {
+    }
+}

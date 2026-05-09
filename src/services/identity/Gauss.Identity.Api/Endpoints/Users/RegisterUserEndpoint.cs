@@ -37,7 +37,7 @@ public static class RegisterUserEndpoint
 
         return result.ToHttpResult(response =>
             Results.Created(
-                $"/api/v1/identity/users/{response.UserId}",
+                (string?)null,
                 response));
     }
 }

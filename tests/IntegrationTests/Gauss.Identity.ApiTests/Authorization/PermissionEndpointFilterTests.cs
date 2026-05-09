@@ -110,10 +110,10 @@ public sealed class PermissionEndpointFilterTests
         public string? LastPermissionCode { get; private set; }
 
         public Task<bool> HasPermissionAsync(
-            Gauss.Identity.Domain.Roles.ValueObjects.PermissionCode permissionCode,
+            string permissionCode,
             CancellationToken cancellationToken = default)
         {
-            LastPermissionCode = permissionCode.Value;
+            LastPermissionCode = permissionCode;
 
             return Task.FromResult(HasPermission);
         }

@@ -44,7 +44,7 @@ public sealed class ProblemDetailsMapperTests
         problemDetails.Status.Should().Be(StatusCodes.Status409Conflict);
         problemDetails.Title.Should().Be("Conflict");
         problemDetails.Detail.Should().Be("A user with the specified email already exists.");
-        problemDetails.Type.Should().Be("https://httpstatuses.com/409");
+        problemDetails.Type.Should().Be("about:blank");
         problemDetails.Extensions.Should().ContainKey("code");
         problemDetails.Extensions["code"].Should().Be("Identity.User.EmailAlreadyExists");
     }

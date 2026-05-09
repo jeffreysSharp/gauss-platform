@@ -83,7 +83,7 @@ public sealed class ResultExtensionsTests
         root.GetProperty("status").GetInt32().Should().Be(StatusCodes.Status409Conflict);
         root.GetProperty("title").GetString().Should().Be("Conflict");
         root.GetProperty("detail").GetString().Should().Be("A user with the specified email already exists.");
-        root.GetProperty("type").GetString().Should().Be("https://httpstatuses.com/409");
+        root.GetProperty("type").GetString().Should().Be("about:blank");
         root.GetProperty("code").GetString().Should().Be("Identity.User.EmailAlreadyExists");
     }
 

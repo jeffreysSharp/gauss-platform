@@ -1,3 +1,5 @@
+using Gauss.BuildingBlocks.Api.Responses;
+using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Tenancy;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +34,10 @@ public static class CurrentUserEndpoint
             string.IsNullOrWhiteSpace(currentUserContext.Name) ||
             string.IsNullOrWhiteSpace(currentUserContext.Email))
         {
-            return Results.Unauthorized();
+            return Error.Unauthorized(
+                    "Identity.Auth.InvalidSession",
+                    "The authenticated session is missing required claims.")
+                .ToProblemResult();
         }
 
         var response = new CurrentUserResponse(
