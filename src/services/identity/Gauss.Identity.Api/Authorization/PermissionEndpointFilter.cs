@@ -1,7 +1,6 @@
 using Gauss.BuildingBlocks.Api.Responses;
 using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authorization;
-using Gauss.Identity.Domain.Roles.ValueObjects;
 
 namespace Gauss.Identity.Api.Authorization;
 
@@ -17,7 +16,7 @@ public sealed class PermissionEndpointFilter(
             .GetRequiredService<IPermissionAuthorizationService>();
 
         var hasPermission = await permissionAuthorizationService.HasPermissionAsync(
-            PermissionCode.Create(permissionCode),
+            permissionCode,
             context.HttpContext.RequestAborted);
 
         if (!hasPermission)

@@ -21,7 +21,7 @@ public sealed class PermissionAuthorizationServiceTests
         var userId = UserId.New();
         var tenantId = TenantId.New();
 
-        var permission = CreatePermission("Identity.Users.Read");
+        var permission = CreatePermission(IdentityPermissions.PermissionsRead);
 
         var role = Role.Create(
             tenantId,
@@ -49,7 +49,8 @@ public sealed class PermissionAuthorizationServiceTests
             roleRepository: roleRepository);
 
         // Act
-        var hasPermission = await service.HasPermissionAsync(permission.Code);
+        var hasPermission = await service.HasPermissionAsync(
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeTrue();
@@ -71,7 +72,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         // Act
         var hasPermission = await service.HasPermissionAsync(
-            PermissionCode.Create("Identity.Users.Read"));
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();
@@ -99,7 +100,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         // Act
         var hasPermission = await service.HasPermissionAsync(
-            PermissionCode.Create("Identity.Users.Read"));
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();
@@ -124,7 +125,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         // Act
         var hasPermission = await service.HasPermissionAsync(
-            PermissionCode.Create("Identity.Users.Read"));
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();
@@ -156,7 +157,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         // Act
         var hasPermission = await service.HasPermissionAsync(
-            PermissionCode.Create("Identity.Users.Read"));
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();
@@ -193,7 +194,7 @@ public sealed class PermissionAuthorizationServiceTests
 
         // Act
         var hasPermission = await service.HasPermissionAsync(
-            PermissionCode.Create("Identity.Users.Read"));
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();
@@ -234,7 +235,8 @@ public sealed class PermissionAuthorizationServiceTests
             });
 
         // Act
-        var hasPermission = await service.HasPermissionAsync(permission.Code);
+        var hasPermission = await service.HasPermissionAsync(
+            IdentityPermissions.PermissionsRead);
 
         // Assert
         hasPermission.Should().BeFalse();

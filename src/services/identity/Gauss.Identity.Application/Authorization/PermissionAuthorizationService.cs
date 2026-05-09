@@ -14,10 +14,13 @@ public sealed class PermissionAuthorizationService(
     : IPermissionAuthorizationService
 {
     public async Task<bool> HasPermissionAsync(
-        PermissionCode permissionCode,
+        string permissionCode,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(permissionCode);
+        if (string.IsNullOrWhiteSpace(permissionCode))
+        {
+            return false;
+        }
 
         if (!currentUserContext.IsAuthenticated ||
             currentUserContext.UserId is null ||
@@ -26,6 +29,8 @@ public sealed class PermissionAuthorizationService(
         {
             return false;
         }
+
+        var code = PermissionCode.Create(permissionCode);
 
         var userId = UserId.From(currentUserContext.UserId.Value);
 
@@ -36,6 +41,6 @@ public sealed class PermissionAuthorizationService(
 
         return roles.Any(role =>
             role.IsActive &&
-            role.HasPermission(permissionCode));
+            role.HasPermission(code));
     }
 }
