@@ -1,3 +1,5 @@
+using Gauss.BuildingBlocks.Api.Responses;
+using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authorization;
 using Gauss.Identity.Domain.Roles.ValueObjects;
 
@@ -20,7 +22,10 @@ public sealed class PermissionEndpointFilter(
 
         if (!hasPermission)
         {
-            return Results.Forbid();
+            return Error.Forbidden(
+                    "Identity.Permission.Denied",
+                    "You do not have the required permission.")
+                .ToProblemResult();
         }
 
         return await next(context);
