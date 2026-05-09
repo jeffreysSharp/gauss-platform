@@ -3,7 +3,7 @@ using Gauss.BuildingBlocks.Application.Abstractions.Results;
 using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
-using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 using Gauss.Identity.Domain.Users.ValueObjects;
 
 namespace Gauss.Identity.Application.Authentication.Login;

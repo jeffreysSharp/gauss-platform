@@ -3,6 +3,7 @@ using Gauss.Identity.Application.Abstractions.Authentication;
 using Gauss.Identity.Application.Abstractions.Persistence;
 using Gauss.Identity.Application.Abstractions.Time;
 using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 using Gauss.Identity.Domain.Tenants;
 using Gauss.Identity.Domain.Users;
 using Gauss.Identity.Domain.Users.ValueObjects;

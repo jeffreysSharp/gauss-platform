@@ -1,4 +1,5 @@
 using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 
 namespace Gauss.Identity.Application.Abstractions.Authentication;
 

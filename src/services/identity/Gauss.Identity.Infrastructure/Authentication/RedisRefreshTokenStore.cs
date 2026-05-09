@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Gauss.Identity.Application.Abstractions.Authentication;
-using Gauss.Identity.Application.Authentication.RefreshTokens;
+using Gauss.Identity.Domain.RefreshTokens;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
