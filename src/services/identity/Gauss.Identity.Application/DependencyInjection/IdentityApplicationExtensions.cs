@@ -14,9 +14,20 @@ public static class IdentityApplicationExtensions
 {
     public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
     {
-        services.AddCommandHandlerWithValidation<RegisterUserCommand, RegisterUserResponse, RegisterUserCommandHandler>();
-        services.AddCommandHandlerWithValidation<LoginCommand, LoginResponse, LoginCommandHandler>();
-        services.AddCommandHandlerWithValidation<RefreshTokenCommand, RefreshTokenResponse, RefreshTokenCommandHandler>();
+        services.AddCommandHandlerWithValidation<
+            RegisterUserCommand,
+            RegisterUserResponse,
+            RegisterUserCommandHandler>();
+
+        services.AddCommandHandlerWithValidation<
+            LoginCommand,
+            LoginResponse,
+            LoginCommandHandler>();
+
+        services.AddCommandHandlerWithValidation<
+            RefreshTokenCommand,
+            RefreshTokenResponse,
+            RefreshTokenCommandHandler>();
 
         services.AddScoped<IValidator<RegisterUserCommand>, RegisterUserCommandValidator>();
         services.AddScoped<IValidator<LoginCommand>, LoginCommandValidator>();
@@ -25,8 +36,9 @@ public static class IdentityApplicationExtensions
         services.AddScoped<IPermissionAuthorizationService, PermissionAuthorizationService>();
 
         services.AddScoped<GetPermissionsQueryHandler>();
+
         services.AddScoped<IQueryHandler<GetPermissionsQuery, IReadOnlyCollection<GetPermissionResponse>>>(
-            sp => sp.GetRequiredService<GetPermissionsQueryHandler>());
+            serviceProvider => serviceProvider.GetRequiredService<GetPermissionsQueryHandler>());
 
         return services;
     }

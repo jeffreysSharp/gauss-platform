@@ -14,10 +14,11 @@ public static class CommandHandlerExtensions
     {
         services.AddScoped<THandler>();
 
-        services.AddScoped<ICommandHandler<TCommand, TResponse>>(sp =>
+        services.AddScoped<ICommandHandler<TCommand, TResponse>>(serviceProvider =>
         {
-            var innerHandler = sp.GetRequiredService<THandler>();
-            var validators = sp.GetServices<IValidator<TCommand>>();
+            var innerHandler = serviceProvider.GetRequiredService<THandler>();
+
+            var validators = serviceProvider.GetServices<IValidator<TCommand>>();
 
             return new ValidationCommandHandlerDecorator<TCommand, TResponse>(
                 innerHandler,
