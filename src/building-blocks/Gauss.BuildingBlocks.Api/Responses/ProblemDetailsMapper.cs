@@ -6,6 +6,8 @@ namespace Gauss.BuildingBlocks.Api.Responses;
 
 public static class ProblemDetailsMapper
 {
+    private const string DefaultProblemType = "about:blank";
+
     public static ProblemDetails ToProblemDetails(Error error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -17,7 +19,7 @@ public static class ProblemDetailsMapper
             Status = statusCode,
             Title = GetTitle(error.Type),
             Detail = error.Description,
-            Type = GetTypeUri(statusCode)
+            Type = DefaultProblemType
         };
 
         problemDetails.Extensions["code"] = error.Code;
@@ -51,10 +53,5 @@ public static class ProblemDetailsMapper
             ErrorType.Failure => "Server Error",
             _ => "Server Error"
         };
-    }
-
-    private static string GetTypeUri(int statusCode)
-    {
-        return $"https://httpstatuses.com/{statusCode}";
     }
 }
