@@ -24,16 +24,23 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
-  dotnetSdkVersion: '10.0.x'
-  solutionPath: 'Gauss.slnx'
+  - group: gauss-integration-tests-secrets
 
-  buildingBlocksUnitTestProject: 'tests/UnitTests/Gauss.BuildingBlocks.UnitTests/Gauss.BuildingBlocks.UnitTests.csproj'
-  identityUnitTestProject: 'tests/UnitTests/Gauss.Identity.UnitTests/Gauss.Identity.UnitTests.csproj'
-  identityInfrastructureTestProject: 'tests/IntegrationTests/Gauss.Identity.InfrastructureTests/Gauss.Identity.InfrastructureTests.csproj'
-  identityApiTestProject: 'tests/IntegrationTests/Gauss.Identity.ApiTests/Gauss.Identity.ApiTests.csproj'
+  - name: buildConfiguration
+    value: 'Release'
+  - name: dotnetSdkVersion
+    value: '10.0.x'
+  - name: solutionPath
+    value: 'Gauss.slnx'
 
-  sqlServerPassword: 'Asd123!!!'
+  - name: buildingBlocksUnitTestProject
+    value: 'tests/UnitTests/Gauss.BuildingBlocks.UnitTests/Gauss.BuildingBlocks.UnitTests.csproj'
+  - name: identityUnitTestProject
+    value: 'tests/UnitTests/Gauss.Identity.UnitTests/Gauss.Identity.UnitTests.csproj'
+  - name: identityInfrastructureTestProject
+    value: 'tests/IntegrationTests/Gauss.Identity.InfrastructureTests/Gauss.Identity.InfrastructureTests.csproj'
+  - name: identityApiTestProject
+    value: 'tests/IntegrationTests/Gauss.Identity.ApiTests/Gauss.Identity.ApiTests.csproj'
 
 stages:
   - stage: Build

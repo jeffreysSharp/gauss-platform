@@ -1,4 +1,5 @@
 using FluentMigrator.Runner;
+using Gauss.Testing.Configuration;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -6,10 +7,6 @@ namespace Gauss.Testing.Fixtures;
 
 public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
 {
-    private const string DefaultSqlServerHost = @".\SQLEXPRESS";
-    private const string DefaultSqlServerUser = "sa";
-    private const string DefaultSqlServerPassword = "Asd123!!!";
-
     private readonly string _databaseName = $"Gauss_Tests_{Guid.NewGuid():N}";
 
     public string ConnectionString => CreateConnectionString(_databaseName);
@@ -30,14 +27,9 @@ public sealed class SqlServerTestDatabaseFixture : IAsyncLifetime
 
     private static string CreateConnectionString(string databaseName)
     {
-        var host = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_HOST")
-            ?? DefaultSqlServerHost;
-
-        var user = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_USER")
-            ?? DefaultSqlServerUser;
-
-        var password = Environment.GetEnvironmentVariable("GAUSS_TEST_SQLSERVER_PASSWORD")
-            ?? DefaultSqlServerPassword;
+        var host = TestConfiguration.GetOptional("GAUSS_TEST_SQLSERVER_HOST") ?? @".\SQLEXPRESS";
+        var user = TestConfiguration.GetOptional("GAUSS_TEST_SQLSERVER_USER") ?? "sa";
+        var password = TestConfiguration.GetRequired("GAUSS_TEST_SQLSERVER_PASSWORD");
 
         return $"Server={host};Database={databaseName};User ID={user};Password={password};TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;";
     }
