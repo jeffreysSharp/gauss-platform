@@ -128,6 +128,97 @@ dotnet test Gauss.slnx --configuration Release
 
 ---
 
+## Secrets and Local Configuration
+
+Secrets are never committed to source control. The repository contains safe
+placeholders in `appsettings.Development.json` and `.env.example`. Real values
+must be supplied through one of the mechanisms below before running the API or
+tests locally.
+
+### Identity API — dotnet user-secrets
+
+The Identity API reads `Identity:Persistence:ConnectionString` and
+`Identity:AccessToken:SecretKey` from `dotnet user-secrets` when running in
+the `Development` environment. The application will fail at startup with a
+clear validation error if either value is missing.
+
+```bash
+# Initialise the user-secrets store for the Identity API project (run once)
+dotnet user-secrets init --project src/services/identity/Gauss.Identity.Api
+
+# Set the SQL Server connection string (adjust password to match your .env)
+dotnet user-secrets set "Identity:Persistence:ConnectionString" \
+  "Server=.\SQLEXPRESS;Database=GAUSS;User ID=sa;Password=<YOUR_LOCAL_SA_PASSWORD>;TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;" \
+  --project src/services/identity/Gauss.Identity.Api
+
+# Set the JWT signing key (generate a strong random value, minimum 32 characters)
+dotnet user-secrets set "Identity:AccessToken:SecretKey" \
+  "<GENERATE_A_STRONG_RANDOM_KEY_HERE>" \
+  --project src/services/identity/Gauss.Identity.Api
+
+# Verify
+dotnet user-secrets list --project src/services/identity/Gauss.Identity.Api
+```
+
+### Docker Compose and integration tests — .env file
+
+The `.env` file at the repository root is used by **both** Docker Compose and
+the test infrastructure:
+
+* `docker-compose.yml` reads `MSSQL_SA_PASSWORD` to configure the SQL Server
+  container. The compose file will refuse to start if the variable is absent.
+* Integration and API tests read `GAUSS_TEST_SQLSERVER_*` and
+  `GAUSS_TEST_REDIS_CONNECTION_STRING` from `.env` automatically, so you do
+  not need to export them as shell environment variables for local runs.
+
+```bash
+# Copy the example file and fill in your chosen local SA password
+cp .env.example .env
+# Edit .env — set MSSQL_SA_PASSWORD and GAUSS_TEST_SQLSERVER_PASSWORD to the
+# same value, and adjust other variables to match your local setup.
+```
+
+The `.env` file is gitignored and must never be committed. `.env.example`
+contains placeholders only and is safe to commit.
+
+The test infrastructure resolves values in this order (first wins):
+
+1. Process environment variable
+2. `.env` file at the repository root
+
+| Variable | Description | Default if absent |
+|---|---|---|
+| `GAUSS_TEST_SQLSERVER_HOST` | SQL Server host and port | `.\SQLEXPRESS` |
+| `GAUSS_TEST_SQLSERVER_USER` | SQL Server login | `sa` |
+| `GAUSS_TEST_SQLSERVER_PASSWORD` | SQL Server SA password | *(required — fails fast)* |
+| `GAUSS_TEST_REDIS_CONNECTION_STRING` | Redis connection string | `localhost:6379,abortConnect=false` |
+
+In CI these variables are supplied by the Azure DevOps variable group
+`gauss-integration-tests-secrets` as process environment variables, which
+take precedence over any `.env` file.
+
+When using the Docker Compose stack for local tests:
+
+```bash
+docker compose up -d
+dotnet test Gauss.slnx --configuration Release
+```
+
+### CI pipeline — Azure DevOps secret variable group
+
+The CI pipeline resolves `$(sqlServerPassword)` from the Azure DevOps Library
+variable group `gauss-integration-tests-secrets`. This group must be created
+manually in the Azure DevOps project Library before the Integration Tests stage
+can run.
+
+Required secret variable in the group:
+
+| Variable name | Type | Description |
+|---|---|---|
+| `sqlServerPassword` | **Secret** | SA password for the pipeline SQL Server container |
+
+---
+
 ## CI Pipeline
 
 The official CI pipeline is defined in:

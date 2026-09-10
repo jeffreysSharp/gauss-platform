@@ -6,7 +6,7 @@ services:
     container_name: gauss-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Asd123!!!"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required. Copy .env.example to .env and set a value.}"
       MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
@@ -15,8 +15,8 @@ services:
     healthcheck:
       test: >
         /bin/bash -c "
-        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Asd123!!!' -C -Q 'SELECT 1'
-        || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Asd123!!!' -Q 'SELECT 1'
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$MSSQL_SA_PASSWORD -C -Q 'SELECT 1'
+        || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $$MSSQL_SA_PASSWORD -Q 'SELECT 1'
         "
       interval: 10s
       timeout: 5s

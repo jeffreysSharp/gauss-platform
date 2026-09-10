@@ -1,3 +1,4 @@
+using Gauss.Testing.Configuration;
 using StackExchange.Redis;
 
 namespace Gauss.Testing.Fixtures;
@@ -10,7 +11,7 @@ public sealed class RedisTestFixture : IAsyncLifetime
     private ConnectionMultiplexer? _connectionMultiplexer;
 
     public string ConnectionString =>
-        Environment.GetEnvironmentVariable("GAUSS_TEST_REDIS_CONNECTION_STRING")
+        TestConfiguration.GetOptional("GAUSS_TEST_REDIS_CONNECTION_STRING")
         ?? DefaultConnectionString;
 
     public ConnectionMultiplexer Multiplexer =>
