@@ -147,6 +147,8 @@ stages:
               docker compose up -d
               docker compose ps
             displayName: 'Start integration test dependencies'
+            env:
+              MSSQL_SA_PASSWORD: '$(MSSQL_SA_PASSWORD)'
 
           - script: |
               echo "Waiting for SQL Server to be ready..."
@@ -231,3 +233,5 @@ stages:
               docker compose down -v --remove-orphans
             displayName: 'Stop integration test dependencies'
             condition: always()
+            env:
+              MSSQL_SA_PASSWORD: '$(MSSQL_SA_PASSWORD)'
