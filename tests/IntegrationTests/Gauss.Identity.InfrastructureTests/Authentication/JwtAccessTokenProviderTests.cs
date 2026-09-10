@@ -170,7 +170,7 @@ public sealed class JwtAccessTokenProviderTests
         {
             Issuer = "GAUSS.Identity",
             Audience = "GAUSS.Platform",
-            SecretKey = "development-only-secret-key-with-at-least-32-characters",
+            SecretKey = "unit-test-signing-key-not-used-in-any-real-environment-01",
             ExpirationMinutes = 15
         });
     }
